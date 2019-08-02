@@ -3,9 +3,7 @@ from pandas_schema import Column
 from pandas_schema.validation import MatchesPatternValidation, InRangeValidation, InListValidation, CustomSeriesValidation, CustomElementValidation, CanConvertValidation
 from validate.helpers import InInclusiveRangeValidation
 
-sys_paths = ['SumStats/sumstats/','../SumStats/sumstats/','../../SumStats/sumstats/', '../../../SumStats/sumstats/']
-sys.path.extend(sys_paths)
-from common_constants import *
+from validate.common_constants import *
 
 
 STD_COLS = (PVAL_DSET, CHR_DSET, BP_DSET, OR_DSET, RANGE_L_DSET, RANGE_U_DSET, 
