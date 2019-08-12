@@ -60,7 +60,7 @@ class BasicTestCase(unittest.TestCase):
 
         self.assertTrue(valid_data)
 
-    def test_validate_bad_madatory_file_data(self):
+    def test_validate_bad_pvalue_file_data(self):
         test_filename = "bad_pval.tsv"
         test_filepath = os.path.join(self.test_storepath, test_filename)
         logfile=test_filepath.replace('tsv', 'LOG')
@@ -72,6 +72,72 @@ class BasicTestCase(unittest.TestCase):
         valid_data = validator.validate_data()
         self.assertEqual(len(validator.bad_rows), 4)
         self.assertFalse(valid_data)
+
+    def test_validate_bad_snp_file_data(self):
+        test_filename = "bad_snp.tsv"
+        test_filepath = os.path.join(self.test_storepath, test_filename)
+        logfile=test_filepath.replace('tsv', 'LOG')
+        setup_file = prep.SSTestFile(filename=test_filename)
+        setup_file.set_test_data_dict()
+        setup_file.test_data_dict[SNP_DSET] = ["invalid", 123, "1_1234_A_G", "ss151232"] # set bad snps
+        setup_file.prep_test_file()
+        validator = v.Validator(file=test_filepath, filetype="gwas-upload", logfile=logfile)
+        valid_data = validator.validate_data()
+        self.assertEqual(len(validator.bad_rows), 4)
+        self.assertFalse(valid_data)
+
+    def test_validate_bad_chr_file_data(self):
+        test_filename = "bad_chr.tsv"
+        test_filepath = os.path.join(self.test_storepath, test_filename)
+        logfile=test_filepath.replace('tsv', 'LOG')
+        setup_file = prep.SSTestFile(filename=test_filename)
+        setup_file.set_test_data_dict()
+        setup_file.test_data_dict[CHR_DSET] = [1, 123, "CHR1", "X"] # set 2 bad chrs
+        setup_file.prep_test_file()
+        validator = v.Validator(file=test_filepath, filetype="gwas-upload", logfile=logfile)
+        valid_data = validator.validate_data()
+        self.assertEqual(len(validator.bad_rows), 2)
+        self.assertFalse(valid_data)
+
+    def test_validate_bad_bp_file_data(self):
+        test_filename = "bad_bp.tsv"
+        test_filepath = os.path.join(self.test_storepath, test_filename)
+        logfile=test_filepath.replace('tsv', 'LOG')
+        setup_file = prep.SSTestFile(filename=test_filename)
+        setup_file.set_test_data_dict()
+        setup_file.test_data_dict[BP_DSET] = [1, 1234567890, "CHR1_122334", 123245] # set 2 bad bps
+        setup_file.prep_test_file()
+        validator = v.Validator(file=test_filepath, filetype="gwas-upload", logfile=logfile)
+        valid_data = validator.validate_data()
+        self.assertEqual(len(validator.bad_rows), 2)
+        self.assertFalse(valid_data)
+
+    def test_validate_bad_optional_odds_ratio_file_data(self):
+        test_filename = "bad_odds.tsv"
+        test_filepath = os.path.join(self.test_storepath, test_filename)
+        logfile=test_filepath.replace('tsv', 'LOG')
+        setup_file = prep.SSTestFile(filename=test_filename)
+        setup_file.set_test_data_dict()
+        setup_file.test_data_dict[OR_DSET] = [1.1232e-23, "invalid", 0.123, .3245] # set 1 bad bps
+        setup_file.prep_test_file()
+        validator = v.Validator(file=test_filepath, filetype="gwas-upload", logfile=logfile)
+        valid_data = validator.validate_data()
+        self.assertEqual(len(validator.bad_rows), 1)
+        self.assertFalse(valid_data)
+
+    def test_validate_bad_optional_effect_allele_file_data(self):
+        test_filename = "bad_effect.tsv"
+        test_filepath = os.path.join(self.test_storepath, test_filename)
+        logfile=test_filepath.replace('tsv', 'LOG')
+        setup_file = prep.SSTestFile(filename=test_filename)
+        setup_file.set_test_data_dict()
+        setup_file.test_data_dict[EFFECT_DSET] = ['A', 'AGG', 'INS:T', 'd'] # set 2 bad alleles
+        setup_file.prep_test_file()
+        validator = v.Validator(file=test_filepath, filetype="gwas-upload", logfile=logfile)
+        valid_data = validator.validate_data()
+        self.assertEqual(len(validator.bad_rows), 2)
+        self.assertFalse(valid_data)
+
 
 
 if __name__ == '__main__':

@@ -35,7 +35,7 @@ class Validator:
         self.cols_to_read = []
         self.sep = get_seperator(self.file) 
         self.bad_rows = []
-        self.required_fields = STD_COLS
+        #self.required_fields = STD_COLS
         self.valid_extensions = VALID_FILE_EXTENSIONS
         self.logfile = logfile
 
@@ -54,8 +54,8 @@ class Validator:
             self.required_fields = [key for key, value in CURATOR_STD_MAP.items() if value == PVAL_DSET]
             self.cols_to_validate = [CURATOR_STD_MAP[h] for h in self.header if h in self.required_fields]
         else:
-            self.cols_to_validate = [h for h in self.header if h in self.required_fields]
-        self.cols_to_read = [h for h in self.header if h in self.required_fields]
+            self.cols_to_validate = [h for h in self.header if h in VALID_COLS]
+        self.cols_to_read = [h for h in self.header if h in VALID_COLS]
         
     def setup_schema(self):
         self.setup_field_validation()
@@ -149,9 +149,9 @@ class Validator:
 
     def validate_headers(self):
         self.setup_field_validation()
-        required_is_subset = set(self.required_fields).issubset(self.header)
+        required_is_subset = set(STD_COLS).issubset(self.header)
         if not required_is_subset:
-            logger.error("Required headers: {} are not in the file header: {}".format(self.required_fields, self.header))
+            logger.error("Required headers: {} are not in the file header: {}".format(STD_COLS, self.header))
         return required_is_subset 
         
 

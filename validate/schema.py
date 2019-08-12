@@ -8,6 +8,7 @@ from validate.common_constants import *
 
 
 STD_COLS = (PVAL_DSET, CHR_DSET, BP_DSET, SNP_DSET) #OR_DSET, RANGE_L_DSET, RANGE_U_DSET, BETA_DSET, SE_DSET, FREQ_DSET , EFFECT_DSET, OTHER_DSET)
+VALID_COLS = (PVAL_DSET, CHR_DSET, BP_DSET, SNP_DSET, OR_DSET, RANGE_L_DSET, RANGE_U_DSET, BETA_DSET, SE_DSET, FREQ_DSET , EFFECT_DSET, OTHER_DSET)
 
 CURATOR_STD_MAP = {
 
@@ -63,13 +64,13 @@ VALIDATORS = {
                       ),
     CHR_DSET: Column(CHR_DSET, [InListValidation(VALID_CHROMOSOMES)]),
     BP_DSET: Column(BP_DSET, [CanConvertValidation(DSET_TYPES[BP_DSET]), InInclusiveRangeValidation(1, 999999999)]),
-    OR_DSET: Column(OR_DSET, [CanConvertValidation(float)], allow_empty=True),
+    OR_DSET: Column(OR_DSET, [CanConvertValidation(DSET_TYPES[OR_DSET])], allow_empty=True),
     RANGE_U_DSET: Column(RANGE_U_DSET, [CanConvertValidation(float)], allow_empty=True),
     RANGE_L_DSET: Column(RANGE_L_DSET, [CanConvertValidation(float)], allow_empty=True),
     BETA_DSET: Column(BETA_DSET, [CanConvertValidation(float)], allow_empty=True),
     SE_DSET: Column(SE_DSET, [CanConvertValidation(float)], allow_empty=True),
-    EFFECT_DSET: Column(EFFECT_DSET, [MatchesPatternValidation('[ACTGNactgn]+')], allow_empty=True),
-    OTHER_DSET: Column(OTHER_DSET, [MatchesPatternValidation('[ACTGNactgn]+')], allow_empty=True),
+    EFFECT_DSET: Column(EFFECT_DSET, [MatchesPatternValidation(r'^[ACTGNactgn]+$')], allow_empty=True),
+    OTHER_DSET: Column(OTHER_DSET, [MatchesPatternValidation(r'^[ACTGNactgn]+$')], allow_empty=True),
     FREQ_DSET: Column(FREQ_DSET, [CanConvertValidation(float)], allow_empty=True)
 }
 
