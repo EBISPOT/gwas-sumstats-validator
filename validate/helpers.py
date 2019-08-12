@@ -24,3 +24,6 @@ class InInclusiveRangeValidation(_SeriesValidation):
     def validate(self, series: pd.Series) -> pd.Series:
         series = pd.to_numeric(series, errors='coerce')
         return (series >= self.min) & (series <= self.max)
+
+
+

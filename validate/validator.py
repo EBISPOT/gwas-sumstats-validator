@@ -26,9 +26,9 @@ logger = logging.getLogger(__name__)
 
 
 class Validator:
-    def __init__(self, file, stage):
+    def __init__(self, file, filetype, logfile="VALIDATE.log"):
         self.file = file
-        self.stage = stage
+        self.filetype = filetype
         self.schema = None
         self.header = []
         self.cols_to_validate = []
@@ -36,14 +36,21 @@ class Validator:
         self.sep = get_seperator(self.file) 
         self.bad_rows = []
         self.required_fields = STD_COLS
+        self.valid_extensions = VALID_FILE_EXTENSIONS
+        self.logfile = logfile
 
-        if self.stage == 'curated':
+        if self.filetype == 'curated' or self.filetype == 'gwas-upload':
             # if curator format allow for more chromosome values
             VALID_CHROMOSOMES.extend(['X', 'x', 'Y', 'y', 'MT', 'Mt', 'mt'])
     
+        handler = logging.FileHandler(self.logfile)
+        handler.setLevel(logging.ERROR)
+        logger.addHandler(handler)
+
+
     def setup_field_validation(self):
         self.header = self.get_header()
-        if self.stage == 'curated':
+        if self.filetype == 'curated':
             self.required_fields = [key for key, value in CURATOR_STD_MAP.items() if value == PVAL_DSET]
             self.cols_to_validate = [CURATOR_STD_MAP[h] for h in self.header if h in self.required_fields]
         else:
@@ -69,7 +76,8 @@ class Validator:
             errors = self.schema.validate(to_validate)
             for error in errors:
                 logger.error(error)
-                self.bad_rows.append(error.row)
+                if error.row not in self.bad_rows:
+                    self.bad_rows.append(error.row)
         if not self.bad_rows:
             logger.info("File is valid")
             return True
@@ -89,10 +97,18 @@ class Validator:
             else:
                 chunk.to_csv(newfile, mode='a', header=False, sep='\t', index=False, na_rep='NA')
 
-    def validate_filename(self):
-        if not check_ext(self.file, 'tsv'):
-            logger.error("File extension should be .tsv")
+    def validate_file_extenstion(self):
+        check_exts = [check_ext(self.file, ext) for ext in self.valid_extensions]
+        if not any(check_exts):
+            self.valid_ext = False
+            logger.error("File extension should be in {}".format(self.valid_extensions))
             return False
+        else:
+            self.valid_ext = True
+        return True
+
+    def validate_filename(self):
+        self.validate_file_extenstion()
         pmid, study, trait, build = None, None, None, None
         filename = self.file.split('/')[-1].split('.')[0]
         filename_parts = filename.split('-')
@@ -140,9 +156,7 @@ class Validator:
         
 
 def check_ext(filename, ext):
-    filename = filename.split('/')[-1]
-    parts = filename.split('.')
-    if len(parts) == 2 and parts[-1] == ext:
+    if filename.endswith(ext):
         return True
     return False
 
@@ -155,8 +169,8 @@ def check_build_is_legit(build):
 
 def get_seperator(file):
     filename, file_extension = os.path.splitext(file)
-    sep =  '\s+'
-    if file_extension == '.csv':
+    sep =  '\t'
+    if '.csv' in file_extension:
         sep = ','
     return sep
 
@@ -164,8 +178,7 @@ def get_seperator(file):
 def main():
     argparser = argparse.ArgumentParser()
     argparser.add_argument("-f", help='The path to the summary statistics file to be validated', required=True)
-    argparser.add_argument("--stage", help='The stage in the process the file to be validated is in', default='standard', choices=['curated','standard','harmonised'])
-    argparser.add_argument("--check-filename", help='check the filename matches the pattern <pmid>-<study>-<trait>-build>.tsv ', action='store_true', dest='checkfilename')
+    argparser.add_argument("--filetype", help='The type of file/stage in the process the file to be validated is in. Recommended to leave as default if unknown.', default='gwas-upload', choices=['gwas-upload','curated','standard','harmonised'])
     argparser.add_argument("--logfile", help='Provide the filename for the logs', default='VALIDATE.log')
     argparser.add_argument("--drop-bad-lines", help='Store the good lines from the file in a file named <summary-stats-file>.valid', action='store_true', dest='dropbad')
     
@@ -176,13 +189,18 @@ def main():
     handler.setLevel(logging.ERROR)
     logger.addHandler(handler)
 
-    validator = Validator(file=args.f, stage=args.stage)
+    validator = Validator(file=args.f, filetype=args.filetype, logfile=args.logfile)
     
-    print(args.checkfilename)
-    if args.checkfilename:
+    if args.filetype == "curated":
         logger.info("Validating filename...")
         if not validator.validate_filename():
             logger.info("Invalid filename: {}".format(args.f)) 
+            logger.info("Exiting before any further checks")
+            sys.exit()
+    else:
+        logger.info("Validating file extension...")
+        if not validator.validate_file_extension():
+            logger.info("Invalid file extesion: {}".format(args.f)) 
             logger.info("Exiting before any further checks")
             sys.exit()
     
