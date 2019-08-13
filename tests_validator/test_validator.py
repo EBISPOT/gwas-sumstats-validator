@@ -1,10 +1,10 @@
 import unittest
 import shutil
 import os
-import tests.prep_tests as prep
+import tests_validator.prep_tests as prep
 import validate.validator as v
 from validate.common_constants import *
-import tests.test_values as test_arrays
+import tests_validator.test_values as test_arrays
 
 
 class BasicTestCase(unittest.TestCase):
