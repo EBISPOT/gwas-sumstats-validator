@@ -3,9 +3,7 @@
 A file validator for validating GWAS summary statistics TSV files prior to and post [harmonisation](https://github.com/EBISPOT/sum-stats-formatter/tree/master/harmonisation) using [pandas_schema](https://tmiguelt.github.io/PandasSchema/). The purpose is to validate files before their [conversion to HDF5](https://github.com/EBISPOT/SumStats/). 
 
 ## Installation
-- `git clone https://github.com/EBISPOT/sum-stats-formatter`
-- `cd sum-stats-formatter/validator`
-- `pip install .`
+- `pip install ss-validate`
 
 ## Running the validator
 To run the validator on a file:
