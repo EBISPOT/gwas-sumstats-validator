@@ -66,18 +66,27 @@ class Validator:
         return first_row.columns.values
 
     def validate_data(self):
-        self.setup_schema()    
+        #self.setup_schema()
+        self.setup_field_validation()
+        self.snp_errors = []
+        self.pos_errors = []
         if not self.check_file_is_square():
             logger.error("Please fix the table. Some rows have different numbers of columns to the header")
             logger.info("Rows with different numbers of columns to the header are not validated")
         for chunk in self.df_iterator():
-            to_validate = chunk[self.cols_to_read]
+            to_validate = chunk[self.cols_to_read] 
             to_validate.columns = self.cols_to_validate # sets the headers to standard format if neeeded
-            errors = self.schema.validate(to_validate)
-            for error in errors:
-                logger.error(error)
-                if error.row not in self.bad_rows:
-                    self.bad_rows.append(error.row)
+            #errors = self.schema.validate(to_validate)
+            #self.store_errors(errors, self.bad_rows)
+            # validate the snp column if present
+            if SNP_DSET in self.header:
+                self.schema = Schema([SNP_VALIDATORS[h] for h in self.cols_to_validate])
+                errors = self.schema.validate(to_validate)
+                self.store_errors(errors, self.snp_errors)
+            if CHR_DSET and BP_DSET in self.header:
+                self.schema = Schema([POS_VALIDATORS[h] for h in self.cols_to_validate])
+                errors = self.schema.validate(to_validate)
+                self.store_errors(errors, self.pos_errors)
         if not self.bad_rows:
             logger.info("File is valid")
             return True
@@ -85,7 +94,17 @@ class Validator:
             logger.info("File is invalid - {} bad rows".format(len(self.bad_rows)))
             return False
 
-                
+    def process_errors(self):
+        self.bad_rows = list(set(self.snp_errors) & set(self.pos_errors))
+        
+
+    @staticmethod
+    def store_errors(errors, store):
+        for error in errors:
+            logger.error(error)
+            if error.row not in store:
+                 store.append(error.row)
+
     def write_valid_lines_to_file(self):
         newfile = self.file + ".valid"
         first_chunk = True
@@ -151,7 +170,11 @@ class Validator:
         self.setup_field_validation()
         required_is_subset = set(STD_COLS).issubset(self.header)
         if not required_is_subset:
-            logger.error("Required headers: {} are not in the file header: {}".format(STD_COLS, self.header))
+            # check if everything but snp:
+            required_is_subset = set(STD_COLS_NO_SNP).issubset(self.header)
+            if not required_is_subset:
+                required_is_subset = set(STD_COLS_NO_POS).issubset(self.header)
+                logger.error("Required headers: {} are not in the file header: {}".format(STD_COLS, self.header))
         return required_is_subset 
         
 
