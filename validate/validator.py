@@ -34,7 +34,10 @@ class Validator:
         self.cols_to_validate = []
         self.cols_to_read = []
         self.sep = get_seperator(self.file) 
+        self.errors = []
         self.bad_rows = []
+        self.snp_errors = []
+        self.pos_errors = []
         #self.required_fields = STD_COLS
         self.valid_extensions = VALID_FILE_EXTENSIONS
         self.logfile = logfile
@@ -66,18 +69,13 @@ class Validator:
         return first_row.columns.values
 
     def validate_data(self):
-        #self.setup_schema()
         self.setup_field_validation()
-        self.snp_errors = []
-        self.pos_errors = []
         if not self.check_file_is_square():
             logger.error("Please fix the table. Some rows have different numbers of columns to the header")
             logger.info("Rows with different numbers of columns to the header are not validated")
         for chunk in self.df_iterator():
             to_validate = chunk[self.cols_to_read] 
             to_validate.columns = self.cols_to_validate # sets the headers to standard format if neeeded
-            #errors = self.schema.validate(to_validate)
-            #self.store_errors(errors, self.bad_rows)
             # validate the snp column if present
             if SNP_DSET in self.header:
                 self.schema = Schema([SNP_VALIDATORS[h] for h in self.cols_to_validate])
@@ -87,23 +85,27 @@ class Validator:
                 self.schema = Schema([POS_VALIDATORS[h] for h in self.cols_to_validate])
                 errors = self.schema.validate(to_validate)
                 self.store_errors(errors, self.pos_errors)
+        self.process_errors()
         if not self.bad_rows:
             logger.info("File is valid")
             return True
         else:
             logger.info("File is invalid - {} bad rows".format(len(self.bad_rows)))
+            for error in self.errors:
+                logger.error(error)
             return False
 
     def process_errors(self):
-        self.bad_rows = list(set(self.snp_errors) & set(self.pos_errors))
-        
+        snp_rows = [error.row for error in self.snp_errors]
+        self.errors = [error for error in self.pos_errors if error.row in snp_rows]
+        for error in self.errors:
+            if error.row not in self.bad_rows:
+                self.bad_rows.append(error.row)
 
     @staticmethod
     def store_errors(errors, store):
         for error in errors:
-            logger.error(error)
-            if error.row not in store:
-                 store.append(error.row)
+            store.append(error)
 
     def write_valid_lines_to_file(self):
         newfile = self.file + ".valid"
