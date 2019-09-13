@@ -1,10 +1,10 @@
 import unittest
 import shutil
 import os
-import tests_validator.prep_tests as prep
+import tests.prep_tests as prep
 import validate.validator as v
 from validate.common_constants import *
-import tests_validator.test_values as test_arrays
+import tests.test_values as test_arrays
 
 
 class BasicTestCase(unittest.TestCase):
@@ -35,6 +35,26 @@ class BasicTestCase(unittest.TestCase):
     def test_validate_good_file_headers(self):
         test_filepath = os.path.join(self.test_storepath, "test_file.tsv")
         setup_file = prep.SSTestFile()
+        setup_file.prep_test_file()
+        validator = v.Validator(test_filepath, "gwas-upload", logfile=test_filepath + ".LOG")
+        valid_headers = validator.validate_headers()
+        self.assertTrue(valid_headers)
+
+    def test_validate_file_headers_missing_snp(self):
+        test_filepath = os.path.join(self.test_storepath, "test_file.tsv")
+        setup_file = prep.SSTestFile()
+        setup_file.set_test_data_dict()
+        setup_file.test_data_dict.pop(SNP_DSET) # remove a snp field
+        setup_file.prep_test_file()
+        validator = v.Validator(test_filepath, "gwas-upload", logfile=test_filepath + ".LOG")
+        valid_headers = validator.validate_headers()
+        self.assertTrue(valid_headers)
+
+    def test_validate_file_headers_missing_pos(self):
+        test_filepath = os.path.join(self.test_storepath, "test_file.tsv")
+        setup_file = prep.SSTestFile()
+        setup_file.set_test_data_dict()
+        setup_file.test_data_dict.pop(CHR_DSET, BP_DSET) # remove a snp field
         setup_file.prep_test_file()
         validator = v.Validator(test_filepath, "gwas-upload", logfile=test_filepath + ".LOG")
         valid_headers = validator.validate_headers()
@@ -86,6 +106,20 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(len(validator.bad_rows), 4)
         self.assertFalse(valid_data)
 
+    def test_validate_bad_snp_and_no_pos_file_data(self):
+        test_filename = "bad_snp_no_pos.tsv"
+        test_filepath = os.path.join(self.test_storepath, test_filename)
+        logfile=test_filepath.replace('tsv', 'LOG')
+        setup_file = prep.SSTestFile(filename=test_filename)
+        setup_file.set_test_data_dict()
+        setup_file.test_data_dict[SNP_DSET] = ["invalid", "rs123", "1_1234_A_G", "ss151232"] # set bad snps
+        setup_file.test_data_dict[BP_DSET] = [None, 123, "NA", None] # only one good row
+        setup_file.prep_test_file()
+        validator = v.Validator(file=test_filepath, filetype="gwas-upload", logfile=logfile)
+        valid_data = validator.validate_data()
+        self.assertEqual(len(validator.bad_rows), 3)
+        self.assertFalse(valid_data)
+
     def test_validate_bad_chr_file_data(self):
         test_filename = "bad_chr.tsv"
         test_filepath = os.path.join(self.test_storepath, test_filename)
@@ -99,6 +133,20 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(len(validator.bad_rows), 2)
         self.assertFalse(valid_data)
 
+    def test_validate_bad_chr_and_no_snp_file_data(self):
+        test_filename = "bad_chr_no_snp.tsv"
+        test_filepath = os.path.join(self.test_storepath, test_filename)
+        logfile=test_filepath.replace('tsv', 'LOG')
+        setup_file = prep.SSTestFile(filename=test_filename)
+        setup_file.set_test_data_dict()
+        setup_file.test_data_dict[CHR_DSET] = [1, 123, "CHR1", "X"] # set 2 bad chrs
+        setup_file.test_data_dict[SNP_DSET] = ["invalid", 123, "rs1234", "rs151"] # set only one good row
+        setup_file.prep_test_file()
+        validator = v.Validator(file=test_filepath, filetype="gwas-upload", logfile=logfile)
+        valid_data = validator.validate_data()
+        self.assertEqual(len(validator.bad_rows), 3)
+        self.assertFalse(valid_data)
+
     def test_validate_bad_bp_file_data(self):
         test_filename = "bad_bp.tsv"
         test_filepath = os.path.join(self.test_storepath, test_filename)
@@ -110,6 +158,20 @@ class BasicTestCase(unittest.TestCase):
         validator = v.Validator(file=test_filepath, filetype="gwas-upload", logfile=logfile)
         valid_data = validator.validate_data()
         self.assertEqual(len(validator.bad_rows), 2)
+        self.assertFalse(valid_data)
+
+    def test_validate_bad_bp_and_no_snp_file_data(self):
+        test_filename = "bad_bp_no_snp.tsv"
+        test_filepath = os.path.join(self.test_storepath, test_filename)
+        logfile=test_filepath.replace('tsv', 'LOG')
+        setup_file = prep.SSTestFile(filename=test_filename)
+        setup_file.set_test_data_dict()
+        setup_file.test_data_dict[BP_DSET] = [1, 1234567890, "CHR1_122334", 123245] # set 2 bad bps
+        setup_file.test_data_dict[SNP_DSET] = ["invalid", 123, "rs1234", None] # set so only one good row
+        setup_file.prep_test_file()
+        validator = v.Validator(file=test_filepath, filetype="gwas-upload", logfile=logfile)
+        valid_data = validator.validate_data()
+        self.assertEqual(len(validator.bad_rows), 3)
         self.assertFalse(valid_data)
 
     def test_validate_bad_optional_odds_ratio_file_data(self):
@@ -136,6 +198,33 @@ class BasicTestCase(unittest.TestCase):
         validator = v.Validator(file=test_filepath, filetype="gwas-upload", logfile=logfile)
         valid_data = validator.validate_data()
         self.assertEqual(len(validator.bad_rows), 2)
+        self.assertFalse(valid_data)
+
+    def test_validate_empty_snp_file_data(self):
+        test_filename = "empty_snp.tsv"
+        test_filepath = os.path.join(self.test_storepath, test_filename)
+        logfile=test_filepath.replace('tsv', 'LOG')
+        setup_file = prep.SSTestFile(filename=test_filename)
+        setup_file.set_test_data_dict()
+        setup_file.test_data_dict[SNP_DSET] = ["NA", None, None, None] # set bad snps
+        setup_file.prep_test_file()
+        validator = v.Validator(file=test_filepath, filetype="gwas-upload", logfile=logfile)
+        valid_data = validator.validate_data()
+        self.assertEqual(len(validator.bad_rows), 0)
+        self.assertTrue(valid_data)
+
+    def test_validate_empty_snp_no_pos_file_data(self):
+        test_filename = "empty_snp_no_pos.tsv"
+        test_filepath = os.path.join(self.test_storepath, test_filename)
+        logfile=test_filepath.replace('tsv', 'LOG')
+        setup_file = prep.SSTestFile(filename=test_filename)
+        setup_file.set_test_data_dict()
+        setup_file.test_data_dict[SNP_DSET] = ["NA", None, None, None] # set bad snps
+        setup_file.test_data_dict[BP_DSET] = [None, 123, "NA", None] # only one good bp
+        setup_file.prep_test_file()
+        validator = v.Validator(file=test_filepath, filetype="gwas-upload", logfile=logfile)
+        valid_data = validator.validate_data()
+        self.assertEqual(len(validator.bad_rows), 3)
         self.assertFalse(valid_data)
 
 

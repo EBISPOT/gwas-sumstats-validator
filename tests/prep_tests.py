@@ -1,4 +1,4 @@
-from tests_validator.test_values import *
+from tests.test_values import *
 import pandas as pd
 
 
