@@ -1,7 +1,9 @@
 import sys
+import gzip
 import csv
 import os
 import argparse
+import pathlib
 import logging
 import pandas as pd
 from pandas_schema import Schema
@@ -70,7 +72,7 @@ class Validator:
 
     def validate_data(self):
         self.setup_field_validation()
-        if not self.check_file_is_square():
+        if not self.open_file_and_check_for_squareness():
             logger.error("Please fix the table. Some rows have different numbers of columns to the header")
             logger.info("Rows with different numbers of columns to the header are not validated")
         for chunk in self.df_iterator():
@@ -118,7 +120,7 @@ class Validator:
             else:
                 chunk.to_csv(newfile, mode='a', header=False, sep='\t', index=False, na_rep='NA')
 
-    def validate_file_extenstion(self):
+    def validate_file_extension(self):
         check_exts = [check_ext(self.file, ext) for ext in self.valid_extensions]
         if not any(check_exts):
             self.valid_ext = False
@@ -129,7 +131,7 @@ class Validator:
         return True
 
     def validate_filename(self):
-        self.validate_file_extenstion()
+        self.validate_file_extension()
         pmid, study, trait, build = None, None, None, None
         filename = self.file.split('/')[-1].split('.')[0]
         filename_parts = filename.split('-')
@@ -154,19 +156,26 @@ class Validator:
                          chunksize=1000000)
         return df
 
-    def check_file_is_square(self):
+    def check_file_is_square(self, csv_file):
         square = True
-        with open(self.file) as csv_file:
-            dialect = csv.Sniffer().sniff(csv_file.readline())
-            csv_file.seek(0)
-            reader = csv.reader(csv_file, dialect)
-            count = 1
-            for row in reader:
-                if (len(row) != len(self.header)):
-                    logger.error("Length of row {c} is: {l} instead of {h}".format(c=count, l=str(len(row)), h=str(len(self.header))))
-                    square = False
-                count += 1
+        dialect = csv.Sniffer().sniff(csv_file.readline())
+        csv_file.seek(0)
+        reader = csv.reader(csv_file, dialect)
+        count = 1
+        for row in reader:
+            if (len(row) != len(self.header)):
+                logger.error("Length of row {c} is: {l} instead of {h}".format(c=count, l=str(len(row)), h=str(len(self.header))))
+                square = False
+            count += 1
         return square
+
+    def open_file_and_check_for_squareness(self):
+        if pathlib.Path(self.file).suffix in [".gz", ".gzip"]:
+             with gzip.open(self.file, 'rt') as f:
+                 return self.check_file_is_square(f)
+        else: 
+            with open(self.file) as f:
+                 return self.check_file_is_square(f)
 
     def validate_headers(self):
         self.setup_field_validation()

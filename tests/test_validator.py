@@ -18,18 +18,18 @@ class BasicTestCase(unittest.TestCase):
     def test_validate_good_file_extension(self):
         test_filepath = os.path.join(self.test_storepath, "test_file.tsv.gz")
         validator = v.Validator(test_filepath, "gwas-upload", logfile=test_filepath + ".LOG")
-        valid_ext = validator.validate_file_extenstion()
+        valid_ext = validator.validate_file_extension()
         self.assertTrue(valid_ext)
         # alternative
         test_filepath = os.path.join(self.test_storepath, "test_file.csv.gz")
         validator = v.Validator(test_filepath, "gwas-upload", logfile=test_filepath + ".LOG")
-        valid_ext = validator.validate_file_extenstion()
+        valid_ext = validator.validate_file_extension()
         self.assertTrue(valid_ext)
 
     def test_validate_bad_file_extension(self):
         test_filepath = os.path.join(self.test_storepath, "test_file.zip")
         validator = v.Validator(test_filepath, "gwas-upload", logfile=test_filepath + ".LOG")
-        valid_ext = validator.validate_file_extenstion()
+        valid_ext = validator.validate_file_extension()
         self.assertFalse(valid_ext)
 
     def test_validate_good_file_headers(self):
