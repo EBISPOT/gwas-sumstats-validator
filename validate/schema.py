@@ -56,7 +56,7 @@ BUILD_MAP = {'28': 'NCBI28',
              '37': 'GRCh37',
              '38': 'GRCh38'}
 
-VALID_FILE_EXTENSIONS = [".tsv", ".csv", ".tsv.gz", ".csv.gz"]
+VALID_FILE_EXTENSIONS = [".tsv", ".csv", ".tsv.gz", ".csv.gz", "gz", "gzip", ".tsv.gzip", ".csv.gzip"]
 
 
 #VALIDATORS = {
