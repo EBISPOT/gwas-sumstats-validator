@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class Validator:
-    def __init__(self, file, filetype, logfile="VALIDATE.log"):
+    def __init__(self, file, filetype, logfile="VALIDATE.log", error_limit=1000):
         self.file = file
         self.filetype = filetype
         self.schema = None
@@ -43,6 +43,7 @@ class Validator:
         #self.required_fields = STD_COLS
         self.valid_extensions = VALID_FILE_EXTENSIONS
         self.logfile = logfile
+        self.error_limit = int(error_limit)
 
         if self.filetype == 'curated' or self.filetype == 'gwas-upload':
             # if curator format allow for more chromosome values
@@ -87,22 +88,28 @@ class Validator:
                 self.schema = Schema([POS_VALIDATORS[h] for h in self.cols_to_validate])
                 errors = self.schema.validate(to_validate)
                 self.store_errors(errors, self.pos_errors)
-        self.process_errors()
+            self.process_errors()
+            if len(self.bad_rows) >= self.error_limit:
+                break
         if not self.bad_rows:
             logger.info("File is valid")
             return True
         else:
-            logger.info("File is invalid - {} bad rows".format(len(self.bad_rows)))
-            for error in self.errors:
-                logger.error(error)
+            logger.info("File is invalid - {} bad rows, limit set to {}".format(len(self.bad_rows), self.error_limit))
             return False
 
     def process_errors(self):
         snp_rows = [error.row for error in self.snp_errors]
-        self.errors = [error for error in self.pos_errors if error.row in snp_rows]
-        for error in self.errors:
-            if error.row not in self.bad_rows:
-                self.bad_rows.append(error.row)
+        pos_rows = [error.row for error in self.pos_errors]
+        intersect_errors = [error for error in self.pos_errors if error.row in snp_rows] # error in both the snp and pos (one or the other is fine)
+        for error in intersect_errors:
+            if len(self.bad_rows) < self.error_limit:
+                logger.error(error)
+                if error.row not in self.bad_rows:
+                    self.bad_rows.append(error.row)
+        self.snp_errors = []
+        self.pos_errors = []
+
 
     @staticmethod
     def store_errors(errors, store):
@@ -214,16 +221,15 @@ def main():
     argparser.add_argument("-f", help='The path to the summary statistics file to be validated', required=True)
     argparser.add_argument("--filetype", help='The type of file/stage in the process the file to be validated is in. Recommended to leave as default if unknown.', default='gwas-upload', choices=['gwas-upload','curated','standard','harmonised'])
     argparser.add_argument("--logfile", help='Provide the filename for the logs', default='VALIDATE.log')
+    argparser.add_argument("--linelimit", help='Stop when this number of bad rows has been found', default=1000)
     argparser.add_argument("--drop-bad-lines", help='Store the good lines from the file in a file named <summary-stats-file>.valid', action='store_true', dest='dropbad')
     
     args = argparser.parse_args()
 
     logfile = args.logfile
-    handler = logging.FileHandler(logfile)
-    handler.setLevel(logging.ERROR)
-    logger.addHandler(handler)
-
-    validator = Validator(file=args.f, filetype=args.filetype, logfile=args.logfile)
+    linelimit = args.linelimit
+    
+    validator = Validator(file=args.f, filetype=args.filetype, logfile=args.logfile, error_limit=linelimit)
     
     if args.filetype == "curated":
         logger.info("Validating filename...")
