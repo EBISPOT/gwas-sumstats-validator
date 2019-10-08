@@ -21,9 +21,12 @@ Information and errors are logged to the console and errors logged to the file s
 The errors from the output tell us that row seven has too many columns and row one does not have a valid pvalue. If these rows are not fixed, they will later be dropped and not converted to HDF5. 
 
 ### Addional options
+- `--linelimit` : _int, default 1000_
+
+   Once this number of erroneous rows has been reached, stop looking for more.
 - `--drop-bad-lines` : _bool, default False_
 
    Drops the the lines with errors from the file and writes it to a new file called <file_to_validate.tsv.valid>
 - `--stage` : _{'standard', 'harmonised', 'curated'}, default 'standard'_
 
-   The stage the file is in. It is either standard format ('standard'), harmonised ('harmonised') or pre-standard in the custom curated format ('curated')
+   The stage the file is in. It is either standard format ('standard'), harmonised ('harmonised') or pre-standard in the custom curated format ('curated'). Recommended to leave as default.
