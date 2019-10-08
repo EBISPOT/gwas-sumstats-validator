@@ -160,7 +160,7 @@ class Validator:
                          error_bad_lines=False,
                          warn_bad_lines=False,
                          comment='#', 
-                         chunksize=10)
+                         chunksize=1000000)
         return df
 
     def check_file_is_square(self, csv_file):
