@@ -7,6 +7,8 @@ from validate.helpers import InInclusiveRangeValidation
 from validate.common_constants import *
 
 
+MININMUM_ROWS = 100000
+
 STD_COLS = (PVAL_DSET, CHR_DSET, BP_DSET, SNP_DSET) #OR_DSET, RANGE_L_DSET, RANGE_U_DSET, BETA_DSET, SE_DSET, FREQ_DSET , EFFECT_DSET, OTHER_DSET)
 STD_COLS_NO_SNP = (PVAL_DSET, CHR_DSET, BP_DSET)
 STD_COLS_NO_POS = (PVAL_DSET, SNP_DSET)

@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class Validator:
-    def __init__(self, file, filetype, logfile="VALIDATE.log", error_limit=1000):
+    def __init__(self, file, filetype, logfile="VALIDATE.log", error_limit=1000, minrows=MININMUM_ROWS):
         self.file = file
         self.filetype = filetype
         self.schema = None
@@ -44,6 +44,8 @@ class Validator:
         self.valid_extensions = VALID_FILE_EXTENSIONS
         self.logfile = logfile
         self.error_limit = int(error_limit)
+        self.minrows = int(minrows)
+        self.nrows = None
 
         if self.filetype == 'curated' or self.filetype == 'gwas-upload':
             # if curator format allow for more chromosome values
@@ -73,7 +75,12 @@ class Validator:
 
     def validate_data(self):
         self.setup_field_validation()
-        if not self.open_file_and_check_for_squareness():
+        square_file = self.open_file_and_check_for_squareness()
+        enough_rows = True
+        if self.nrows < self.minrows:
+            logger.error("There are only {} rows detected in the file, but the minimum requirement is {}".format(str(self.nrows), str(self.minrows)))
+            enough_rows = False
+        if square_file is False:
             logger.error("Please fix the table. Some rows have different numbers of columns to the header")
             logger.info("Rows with different numbers of columns to the header are not validated")
         for chunk in self.df_iterator():
@@ -91,7 +98,9 @@ class Validator:
             self.process_errors()
             if len(self.bad_rows) >= self.error_limit:
                 break
-        if not self.bad_rows:
+        if enough_rows is False or square_file is False:
+            logger.info("File is invalid")
+        elif not self.bad_rows:
             logger.info("File is valid")
             return True
         else:
@@ -163,26 +172,26 @@ class Validator:
                          chunksize=1000000)
         return df
 
-    def check_file_is_square(self, csv_file):
+    def check_rows(self, csv_file):
         square = True
         dialect = csv.Sniffer().sniff(csv_file.readline())
         csv_file.seek(0)
         reader = csv.reader(csv_file, dialect)
-        count = 1
+        self.nrows = 0
         for row in reader:
             if (len(row) != len(self.header)):
-                logger.error("Length of row {c} is: {l} instead of {h}".format(c=count, l=str(len(row)), h=str(len(self.header))))
+                logger.error("Length of row {c} is: {l} instead of {h}".format(c=self.nrows, l=str(len(row)), h=str(len(self.header))))
                 square = False
-            count += 1
+            self.nrows += 1
         return square
 
     def open_file_and_check_for_squareness(self):
         if pathlib.Path(self.file).suffix in [".gz", ".gzip"]:
              with gzip.open(self.file, 'rt') as f:
-                 return self.check_file_is_square(f)
+                 return self.check_rows(f)
         else: 
             with open(self.file) as f:
-                 return self.check_file_is_square(f)
+                 return self.check_rows(f)
 
     def validate_headers(self):
         self.setup_field_validation()
@@ -222,14 +231,16 @@ def main():
     argparser.add_argument("--filetype", help='The type of file/stage in the process the file to be validated is in. Recommended to leave as default if unknown.', default='gwas-upload', choices=['gwas-upload','curated','standard','harmonised'])
     argparser.add_argument("--logfile", help='Provide the filename for the logs', default='VALIDATE.log')
     argparser.add_argument("--linelimit", help='Stop when this number of bad rows has been found', default=1000)
+    argparser.add_argument("--minrows", help='Minimum number of rows acceptable for the file', default=MININMUM_ROWS)
     argparser.add_argument("--drop-bad-lines", help='Store the good lines from the file in a file named <summary-stats-file>.valid', action='store_true', dest='dropbad')
     
     args = argparser.parse_args()
 
     logfile = args.logfile
     linelimit = args.linelimit
+    minrows = args.minrows
     
-    validator = Validator(file=args.f, filetype=args.filetype, logfile=args.logfile, error_limit=linelimit)
+    validator = Validator(file=args.f, filetype=args.filetype, logfile=args.logfile, error_limit=linelimit, minrows=minrows)
     
     if args.filetype == "curated":
         logger.info("Validating filename...")

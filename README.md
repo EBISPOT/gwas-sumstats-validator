@@ -24,6 +24,9 @@ The errors from the output tell us that row seven has too many columns and row o
 - `--linelimit` : _int, default 1000_
 
    Once this number of erroneous rows has been reached, stop looking for more.
+- `--minrows` : _int, default 100000_
+
+   The minimum number of rows the file is required to have in order to validate sucZZcessfully.
 - `--drop-bad-lines` : _bool, default False_
 
    Drops the the lines with errors from the file and writes it to a new file called <file_to_validate.tsv.valid>
