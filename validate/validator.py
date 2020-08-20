@@ -73,16 +73,27 @@ class Validator:
         first_row = pd.read_csv(self.file, sep=self.sep, comment='#', nrows=1, index_col=False)
         return first_row.columns.values
 
-    def validate_data(self):
+    def validate_file_squareness(self):
         self.setup_field_validation()
-        square_file = self.open_file_and_check_for_squareness()
-        enough_rows = True
-        if self.nrows < self.minrows:
-            logger.error("There are only {} rows detected in the file, but the minimum requirement is {}".format(str(self.nrows), str(self.minrows)))
-            enough_rows = False
-        if square_file is False:
+        self.square_file = self.open_file_and_check_for_squareness()
+        if self.square_file is False:
             logger.error("Please fix the table. Some rows have different numbers of columns to the header")
             logger.info("Rows with different numbers of columns to the header are not validated")
+            logger.info("File is invalid")
+            return False
+        return True
+
+    def validate_rows(self):
+        self.enough_rows = True
+        if self.nrows < self.minrows:
+            logger.error("There are only {} rows detected in the file, but the minimum requirement is {}".format(str(self.nrows), str(self.minrows)))
+            self.enough_rows = False
+            logger.info("File is invalid")
+            return False
+        return True
+
+    def validate_data(self):
+        self.setup_field_validation()
         for chunk in self.df_iterator():
             to_validate = chunk[self.cols_to_read] 
             to_validate.columns = self.cols_to_validate # sets the headers to standard format if neeeded
@@ -98,9 +109,7 @@ class Validator:
             self.process_errors()
             if len(self.bad_rows) >= self.error_limit:
                 break
-        if enough_rows is False or square_file is False:
-            logger.info("File is invalid")
-        elif not self.bad_rows:
+        if not self.bad_rows:
             logger.info("File is valid")
             return True
         else:
@@ -248,17 +257,37 @@ def main():
             logger.info("Invalid filename: {}".format(args.f)) 
             logger.info("Exiting before any further checks")
             sys.exit()
+        else:
+            logger.info("ok")
     else:
         logger.info("Validating file extension...")
         if not validator.validate_file_extension():
             logger.info("Invalid file extesion: {}".format(args.f)) 
             logger.info("Exiting before any further checks")
             sys.exit()
-    
+        else:
+            logger.info("ok")
+
     logger.info("Validating headers...")
     if not validator.validate_headers():
         logger.info("Invalid headers...exiting before any further checks")            
         sys.exit()
+    else:
+        logger.info("ok")
+
+    logger.info("Validating file for squareness...")
+    if not validator.validate_file_squareness():
+        logger.info("Rows are malformed..exiting before any further checks")
+        sys.exit()
+    else:
+        logger.info("ok")
+    
+    logger.info("Validating rows...")
+    if not validator.validate_rows():
+        logger.info("File contains too few rows..exiting before any further checks")
+        sys.exit()
+    else:
+        logger.info("ok")
 
     logger.info("Validating data...")
     validator.validate_data()
