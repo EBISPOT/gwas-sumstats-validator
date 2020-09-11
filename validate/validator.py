@@ -20,8 +20,14 @@ for HDF5 convertion. The curator format validation only checks the file name,
 the table shape and the pvalue.
 """
 
-
-csv.field_size_limit(sys.maxsize)
+# set field size limit but catch overflow errors
+max_int = sys.maxsize
+while True:
+    try:
+        csv.field_size_limit(max_int)
+        break
+    except OverflowError:
+        max_int = int(max_int/10)
 
 logging.basicConfig(level=logging.INFO, format='(%(levelname)s): %(message)s')
 logger = logging.getLogger(__name__)
