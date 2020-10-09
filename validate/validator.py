@@ -184,7 +184,7 @@ class Validator:
                          error_bad_lines=False,
                          warn_bad_lines=False,
                          comment='#', 
-                         chunksize=1000000)
+                         chunksize=100000)
         return df
 
     def check_rows(self, csv_file):
