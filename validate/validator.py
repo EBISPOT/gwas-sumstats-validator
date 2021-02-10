@@ -6,6 +6,7 @@ import argparse
 import pathlib
 import logging
 import pandas as pd
+from tqdm import tqdm
 from pandas_schema import Schema
 from validate.schema import *
 
@@ -31,6 +32,8 @@ while True:
 
 logging.basicConfig(level=logging.INFO, format='(%(levelname)s): %(message)s')
 logger = logging.getLogger(__name__)
+
+CHUNKSIZE = 100000
 
 
 class Validator:
@@ -100,27 +103,29 @@ class Validator:
 
     def validate_data(self):
         self.setup_field_validation()
-        for chunk in self.df_iterator():
-            to_validate = chunk[self.cols_to_read] 
-            to_validate.columns = self.cols_to_validate # sets the headers to standard format if neeeded
-            # validate the snp column if present
-            if SNP_DSET in self.header:
-                self.schema = Schema([SNP_VALIDATORS[h] for h in self.cols_to_validate])
-                errors = self.schema.validate(to_validate)
-                self.store_errors(errors, self.snp_errors)
-            if CHR_DSET and BP_DSET in self.header:
-                self.schema = Schema([POS_VALIDATORS[h] for h in self.cols_to_validate])
-                errors = self.schema.validate(to_validate)
-                self.store_errors(errors, self.pos_errors)
-            self.process_errors()
-            if len(self.bad_rows) >= self.error_limit:
-                break
-        if not self.bad_rows:
-            logger.info("File is valid")
-            return True
-        else:
-            logger.info("File is invalid - {} bad rows, limit set to {}".format(len(self.bad_rows), self.error_limit))
-            return False
+        with tqdm(total=self.nrows) as pbar:
+            for chunk in self.df_iterator():
+                to_validate = chunk[self.cols_to_read]
+                to_validate.columns = self.cols_to_validate # sets the headers to standard format if neeeded
+                # validate the snp column if present
+                if SNP_DSET in self.header:
+                    self.schema = Schema([SNP_VALIDATORS[h] for h in self.cols_to_validate])
+                    errors = self.schema.validate(to_validate)
+                    self.store_errors(errors, self.snp_errors)
+                if CHR_DSET and BP_DSET in self.header:
+                    self.schema = Schema([POS_VALIDATORS[h] for h in self.cols_to_validate])
+                    errors = self.schema.validate(to_validate)
+                    self.store_errors(errors, self.pos_errors)
+                self.process_errors()
+                pbar.update(CHUNKSIZE)
+                if len(self.bad_rows) >= self.error_limit:
+                    break
+            if not self.bad_rows:
+                logger.info("File is valid")
+                return True
+            else:
+                logger.info("File is invalid - {} bad rows, limit set to {}".format(len(self.bad_rows), self.error_limit))
+                return False
 
     def process_errors(self):
         snp_rows = [error.row for error in self.snp_errors]
@@ -184,7 +189,7 @@ class Validator:
                          error_bad_lines=False,
                          warn_bad_lines=False,
                          comment='#', 
-                         chunksize=100000)
+                         chunksize=CHUNKSIZE)
         return df
 
     def check_rows(self, csv_file):
