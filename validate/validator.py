@@ -61,7 +61,7 @@ class Validator:
             VALID_CHROMOSOMES.extend(['X', 'x', 'Y', 'y', 'MT', 'Mt', 'mt'])
     
         handler = logging.FileHandler(self.logfile)
-        handler.setLevel(logging.ERROR)
+        handler.setLevel(logging.INFO)
         logger.addHandler(handler)
 
 
