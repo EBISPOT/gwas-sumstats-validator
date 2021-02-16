@@ -198,11 +198,15 @@ class Validator:
         csv_file.seek(0)
         reader = csv.reader(csv_file, dialect)
         self.nrows = 0
-        for row in reader:
-            if (len(row) != len(self.header)):
-                logger.error("Length of row {c} is: {l} instead of {h}".format(c=self.nrows, l=str(len(row)), h=str(len(self.header))))
-                square = False
-            self.nrows += 1
+        try:
+            for row in reader:
+                if (len(row) != len(self.header)):
+                    logger.error("Length of row {c} is: {l} instead of {h}".format(c=self.nrows, l=str(len(row)), h=str(len(self.header))))
+                    square = False
+                self.nrows += 1
+        except csv.Error as e:
+            logger.error("There was the following error when checking the squareness of the csv: {}".format(e))
+            square = False
         return square
 
     def open_file_and_check_for_squareness(self):
@@ -210,7 +214,7 @@ class Validator:
              with gzip.open(self.file, 'rt') as f:
                  return self.check_rows(f)
         else: 
-            with open(self.file) as f:
+            with open(self.file, 'r') as f:
                  return self.check_rows(f)
 
     def validate_headers(self):
