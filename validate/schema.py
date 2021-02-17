@@ -1,15 +1,14 @@
-import sys
-import numpy as np
 from pandas_schema import Column
-from pandas_schema.validation import MatchesPatternValidation, InRangeValidation, InListValidation, CustomSeriesValidation, CustomElementValidation, CanConvertValidation, IsDtypeValidation, CanCallValidation
-from validate.helpers import InInclusiveRangeValidation
+import numpy as np
+from pandas_schema.validation import MatchesPatternValidation,  InListValidation,  CanConvertValidation, CustomSeriesValidation, InRangeValidation
+from validate.helpers import InLowerInclusiveRangeValidation, InExclusiveRangeValidation
 
 from validate.common_constants import *
 
 
 MININMUM_ROWS = 100000
 
-STD_COLS = (PVAL_DSET, CHR_DSET, BP_DSET, SNP_DSET) #OR_DSET, RANGE_L_DSET, RANGE_U_DSET, BETA_DSET, SE_DSET, FREQ_DSET , EFFECT_DSET, OTHER_DSET)
+STD_COLS = (PVAL_DSET, CHR_DSET, BP_DSET, SNP_DSET)
 STD_COLS_NO_SNP = (PVAL_DSET, CHR_DSET, BP_DSET)
 STD_COLS_NO_POS = (PVAL_DSET, SNP_DSET)
 VALID_COLS = (PVAL_DSET, OR_DSET, RANGE_L_DSET, RANGE_U_DSET, BETA_DSET, SE_DSET, FREQ_DSET , EFFECT_DSET, OTHER_DSET, CHR_DSET, BP_DSET, SNP_DSET)
@@ -21,9 +20,9 @@ CURATOR_STD_MAP = {
     # p-value
     'pval': PVAL_DSET,
     # chromosome
-    'chr': CHR_DSET, 
+    'chr': CHR_DSET,
     # base pair location
-    'bp': BP_DSET, 
+    'bp': BP_DSET,
     # odds ratio
     'or': OR_DSET,
     # ci lower
@@ -58,26 +57,22 @@ BUILD_MAP = {'28': 'NCBI28',
              '37': 'GRCh37',
              '38': 'GRCh38'}
 
-VALID_FILE_EXTENSIONS = [".tsv", ".csv", ".tsv.gz", ".csv.gz", "gz", "gzip", ".tsv.gzip", ".csv.gzip"]
+VALID_FILE_EXTENSIONS = [".tsv", ".csv", ".tsv.gz", ".csv.gz", ".gz", ".gzip", ".tsv.gzip", ".csv.gzip"]
 
-
-#VALIDATORS = {
-#    PVAL_DSET: Column(PVAL_DSET, [CanConvertValidation(DSET_TYPES[PVAL_DSET]), InInclusiveRangeValidation(0, 1)], allow_empty=False),
-#    OR_DSET: Column(OR_DSET, [CanConvertValidation(DSET_TYPES[OR_DSET])], allow_empty=True),
-#    RANGE_U_DSET: Column(RANGE_U_DSET, [CanConvertValidation(float)], allow_empty=True),
-#    RANGE_L_DSET: Column(RANGE_L_DSET, [CanConvertValidation(float)], allow_empty=True),
-#    BETA_DSET: Column(BETA_DSET, [CanConvertValidation(float)], allow_empty=True),
-#    SE_DSET: Column(SE_DSET, [CanConvertValidation(float)], allow_empty=True),
-#    EFFECT_DSET: Column(EFFECT_DSET, [MatchesPatternValidation(r'^[ACTGNactgn]+$')], allow_empty=True),
-#    OTHER_DSET: Column(OTHER_DSET, [MatchesPatternValidation(r'^[ACTGNactgn]+$')], allow_empty=True),
-#    FREQ_DSET: Column(FREQ_DSET, [CanConvertValidation(float)], allow_empty=True)
-#}
 
 SNP_VALIDATORS = {
     SNP_DSET: Column(SNP_DSET, [CanConvertValidation(DSET_TYPES[SNP_DSET]), MatchesPatternValidation(r'^rs[0-9]+$')], allow_empty=False),
     CHR_DSET: Column(CHR_DSET, [InListValidation(VALID_CHROMOSOMES)], allow_empty=True),
-    BP_DSET: Column(BP_DSET, [CanConvertValidation(DSET_TYPES[BP_DSET]), InInclusiveRangeValidation(1, 999999999)], allow_empty=True),
-    PVAL_DSET: Column(PVAL_DSET, [CanConvertValidation(DSET_TYPES[PVAL_DSET]), InInclusiveRangeValidation(0, 1)], allow_empty=False),
+    BP_DSET: Column(BP_DSET, [CanConvertValidation(DSET_TYPES[BP_DSET]), InRangeValidation(1, 999999999)], allow_empty=True),
+    PVAL_DSET: Column(PVAL_DSET, [CanConvertValidation(DSET_TYPES[PVAL_DSET]),
+                                  InExclusiveRangeValidation(0, 1) |
+                                  (
+                                  CustomSeriesValidation(lambda x: x.str.split('e|E', expand=True)[1].fillna(value=np.nan).astype('float') < -1,
+                                                         'Numbers should be between 0 and 1') &
+                                  CustomSeriesValidation(lambda x: x.str.split('e|E', expand=True)[0].fillna(value=np.nan).astype('float') > 0.0,
+                                                         'Numbers should be between 0 and 1')
+                                  )
+                                  ], allow_empty=False),
     OR_DSET: Column(OR_DSET, [CanConvertValidation(DSET_TYPES[OR_DSET])], allow_empty=True),
     RANGE_U_DSET: Column(RANGE_U_DSET, [CanConvertValidation(float)], allow_empty=True),
     RANGE_L_DSET: Column(RANGE_L_DSET, [CanConvertValidation(float)], allow_empty=True),
@@ -91,8 +86,20 @@ SNP_VALIDATORS = {
 POS_VALIDATORS = {
     SNP_DSET: Column(SNP_DSET, [CanConvertValidation(DSET_TYPES[SNP_DSET]), MatchesPatternValidation(r'^rs[0-9]+$')], allow_empty=True),
     CHR_DSET: Column(CHR_DSET, [InListValidation(VALID_CHROMOSOMES)], allow_empty=False),
-    BP_DSET: Column(BP_DSET, [CanConvertValidation(DSET_TYPES[BP_DSET]), InInclusiveRangeValidation(1, 999999999)], allow_empty=False),
-    PVAL_DSET: Column(PVAL_DSET, [CanConvertValidation(DSET_TYPES[PVAL_DSET]), InInclusiveRangeValidation(0, 1)], allow_empty=False),
+    BP_DSET: Column(BP_DSET, [CanConvertValidation(DSET_TYPES[BP_DSET]), InRangeValidation(1, 999999999)], allow_empty=False),
+    PVAL_DSET: Column(PVAL_DSET, [CanConvertValidation(DSET_TYPES[PVAL_DSET]),
+                                  InExclusiveRangeValidation(0, 1) |
+                                  (
+                                          CustomSeriesValidation(
+                                              lambda x: x.str.split('e|E', expand=True)[1].fillna(value=np.nan).astype(
+                                                  'float') < -1,
+                                              'Numbers should be between 0 and 1') &
+                                          CustomSeriesValidation(
+                                              lambda x: x.str.split('e|E', expand=True)[0].fillna(value=np.nan).astype(
+                                                  'float') > 0.0,
+                                              'Numbers should be between 0 and 1')
+                                  )
+                                  ], allow_empty=False),
     OR_DSET: Column(OR_DSET, [CanConvertValidation(DSET_TYPES[OR_DSET])], allow_empty=True),
     RANGE_U_DSET: Column(RANGE_U_DSET, [CanConvertValidation(float)], allow_empty=True),
     RANGE_L_DSET: Column(RANGE_L_DSET, [CanConvertValidation(float)], allow_empty=True),
