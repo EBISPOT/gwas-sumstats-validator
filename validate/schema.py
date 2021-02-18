@@ -67,10 +67,14 @@ SNP_VALIDATORS = {
     PVAL_DSET: Column(PVAL_DSET, [CanConvertValidation(DSET_TYPES[PVAL_DSET]),
                                   InExclusiveRangeValidation(0, 1) |
                                   (
-                                  CustomSeriesValidation(lambda x: x.str.split('e|E', expand=True)[1].fillna(value=np.nan).astype('float') < -1,
-                                                         'Numbers should be between 0 and 1') &
-                                  CustomSeriesValidation(lambda x: x.str.split('e|E', expand=True)[0].fillna(value=np.nan).astype('float') > 0.0,
-                                                         'Numbers should be between 0 and 1')
+                                          CustomSeriesValidation(
+                                              lambda x: x.str.split('e|E', expand=True)[1].fillna(value=np.nan).astype(
+                                                  'float') < -1,
+                                              'Numbers should be between 0 and 1') &
+                                          CustomSeriesValidation(
+                                              lambda x: x.str.split('e|E', expand=True)[0].fillna(value=np.nan).astype(
+                                                  'float') > 0.0,
+                                              'Numbers should be between 0 and 1')
                                   )
                                   ], allow_empty=False),
     OR_DSET: Column(OR_DSET, [CanConvertValidation(DSET_TYPES[OR_DSET])], allow_empty=True),
