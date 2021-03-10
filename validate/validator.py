@@ -21,6 +21,11 @@ for HDF5 convertion. The curator format validation only checks the file name,
 the table shape and the pvalue.
 """
 
+"""
+For pvalues:
+1) try to convert to scientifc then 
+"""
+
 # set field size limit but catch overflow errors
 max_int = sys.maxsize
 while True:
@@ -138,7 +143,6 @@ class Validator:
                     self.bad_rows.append(error.row)
         self.snp_errors = []
         self.pos_errors = []
-
 
     @staticmethod
     def store_errors(errors, store):
@@ -264,7 +268,7 @@ def main():
     linelimit = args.linelimit
     minrows = args.minrows
     
-    validator = Validator(file=args.f, filetype=args.filetype, logfile=args.logfile, error_limit=linelimit, minrows=minrows)
+    validator = Validator(file=args.f, filetype=args.filetype, logfile=logfile, error_limit=linelimit, minrows=minrows)
     
     if args.filetype == "curated":
         logger.info("Validating filename...")
