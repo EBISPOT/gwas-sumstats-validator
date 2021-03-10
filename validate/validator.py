@@ -144,7 +144,6 @@ class Validator:
         self.snp_errors = []
         self.pos_errors = []
 
-
     @staticmethod
     def store_errors(errors, store):
         for error in errors:
