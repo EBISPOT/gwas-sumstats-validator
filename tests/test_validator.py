@@ -86,11 +86,12 @@ class BasicTestCase(unittest.TestCase):
         logfile=test_filepath.replace('tsv', 'LOG')
         setup_file = prep.SSTestFile(filename=test_filename)
         setup_file.set_test_data_dict()
-        setup_file.test_data_dict[PVAL_DSET] = ["invalid", -123, "another string", 1.5] # set bad pvalue
+        bad_array = ["invalid", -123, "string with and e in it", 1.5] # set bad pvalue
+        setup_file.test_data_dict[PVAL_DSET] = bad_array
         setup_file.prep_test_file()
         validator = v.Validator(file=test_filepath, filetype="gwas-upload", logfile=logfile)
         valid_data = validator.validate_data()
-        self.assertEqual(len(validator.bad_rows), 4)
+        self.assertEqual(len(validator.bad_rows), len(bad_array))
         self.assertFalse(valid_data)
 
     def test_validate_bad_snp_file_data(self):
@@ -227,6 +228,18 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(len(validator.bad_rows), 3)
         self.assertFalse(valid_data)
 
+    def test_validate_small_pvalue_file_data(self):
+        test_filename = "small_pval.tsv"
+        test_filepath = os.path.join(self.test_storepath, test_filename)
+        logfile=test_filepath.replace('tsv', 'LOG')
+        setup_file = prep.SSTestFile(filename=test_filename)
+        setup_file.set_test_data_dict()
+        smallp_array = ['1e-4000', '0.1E-6000', '123E-500', '6.123e-123123'] # set small pvalue
+        setup_file.test_data_dict[PVAL_DSET] = smallp_array
+        setup_file.prep_test_file()
+        validator = v.Validator(file=test_filepath, filetype="gwas-upload", logfile=logfile)
+        valid_data = validator.validate_data()
+        self.assertTrue(valid_data)
 
 
 if __name__ == '__main__':
