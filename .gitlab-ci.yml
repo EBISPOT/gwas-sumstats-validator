@@ -30,7 +30,7 @@ deploy_staging:
     - python setup.py sdist bdist_wheel
     - python -m twine upload -u $PYPI_USER_TEST -p $PYPI_PWD_TEST --repository testpypi dist/*
   only:
-    dev
+    - dev
 
 deploy_prod:
   stage: deploy
@@ -38,4 +38,4 @@ deploy_prod:
     - python setup.py sdist bdist_wheel
     - python -m twine upload -u $PYPI_USER -p $PYPI_PWD --repository pypi dist/*
   only:
-    master
+    - master
