@@ -2,7 +2,6 @@ image: "python:3.7"
 
 stages:
   - test
-  - build
   - deploy
 
 variables:
@@ -25,14 +24,10 @@ test:
   script:
     - pytest -v
 
-build:
-  stage: build
-  script:
-    - python setup.py sdist bdist_wheel
-
 deploy_test:
   stage: deploy
   script:
+    - python setup.py sdist bdist_wheel
     - python -m twine upload -u $PYPI_USER_TEST -p $PYPI_PWD_TEST --repository testpypi dist/*
   only:
     - master
@@ -40,6 +35,7 @@ deploy_test:
 deploy_prod:
   stage: deploy
   script:
+    - python setup.py sdist bdist_wheel
     - python -m twine upload -u $PYPI_USER -p $PYPI_PWD --repository pypi dist/*
   only:
     - tags
