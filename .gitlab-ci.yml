@@ -37,5 +37,6 @@ deploy_prod:
   script:
     - python setup.py sdist bdist_wheel
     - python -m twine upload -u $PYPI_USER -p $PYPI_PWD --repository pypi dist/*
+  when: manual
   only:
     - tags
