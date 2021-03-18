@@ -6,6 +6,7 @@ import argparse
 import pathlib
 import logging
 import pandas as pd
+from tqdm import tqdm
 from pandas_schema import Schema
 from validate.schema import *
 
@@ -20,6 +21,11 @@ for HDF5 convertion. The curator format validation only checks the file name,
 the table shape and the pvalue.
 """
 
+"""
+For pvalues:
+1) try to convert to scientifc then 
+"""
+
 # set field size limit but catch overflow errors
 max_int = sys.maxsize
 while True:
@@ -31,6 +37,8 @@ while True:
 
 logging.basicConfig(level=logging.INFO, format='(%(levelname)s): %(message)s')
 logger = logging.getLogger(__name__)
+
+CHUNKSIZE = 100000
 
 
 class Validator:
@@ -58,7 +66,7 @@ class Validator:
             VALID_CHROMOSOMES.extend(['X', 'x', 'Y', 'y', 'MT', 'Mt', 'mt'])
     
         handler = logging.FileHandler(self.logfile)
-        handler.setLevel(logging.ERROR)
+        handler.setLevel(logging.INFO)
         logger.addHandler(handler)
 
 
@@ -100,27 +108,29 @@ class Validator:
 
     def validate_data(self):
         self.setup_field_validation()
-        for chunk in self.df_iterator():
-            to_validate = chunk[self.cols_to_read] 
-            to_validate.columns = self.cols_to_validate # sets the headers to standard format if neeeded
-            # validate the snp column if present
-            if SNP_DSET in self.header:
-                self.schema = Schema([SNP_VALIDATORS[h] for h in self.cols_to_validate])
-                errors = self.schema.validate(to_validate)
-                self.store_errors(errors, self.snp_errors)
-            if CHR_DSET and BP_DSET in self.header:
-                self.schema = Schema([POS_VALIDATORS[h] for h in self.cols_to_validate])
-                errors = self.schema.validate(to_validate)
-                self.store_errors(errors, self.pos_errors)
-            self.process_errors()
-            if len(self.bad_rows) >= self.error_limit:
-                break
-        if not self.bad_rows:
-            logger.info("File is valid")
-            return True
-        else:
-            logger.info("File is invalid - {} bad rows, limit set to {}".format(len(self.bad_rows), self.error_limit))
-            return False
+        with tqdm(total=self.nrows) as pbar:
+            for chunk in self.df_iterator():
+                to_validate = chunk[self.cols_to_read]
+                to_validate.columns = self.cols_to_validate # sets the headers to standard format if neeeded
+                # validate the snp column if present
+                if SNP_DSET in self.header:
+                    self.schema = Schema([SNP_VALIDATORS[h] for h in self.cols_to_validate])
+                    errors = self.schema.validate(to_validate)
+                    self.store_errors(errors, self.snp_errors)
+                if CHR_DSET and BP_DSET in self.header:
+                    self.schema = Schema([POS_VALIDATORS[h] for h in self.cols_to_validate])
+                    errors = self.schema.validate(to_validate)
+                    self.store_errors(errors, self.pos_errors)
+                self.process_errors()
+                pbar.update(CHUNKSIZE)
+                if len(self.bad_rows) >= self.error_limit:
+                    break
+            if not self.bad_rows:
+                logger.info("File is valid")
+                return True
+            else:
+                logger.info("File is invalid - {} bad rows, limit set to {}".format(len(self.bad_rows), self.error_limit))
+                return False
 
     def process_errors(self):
         snp_rows = [error.row for error in self.snp_errors]
@@ -133,7 +143,6 @@ class Validator:
                     self.bad_rows.append(error.row)
         self.snp_errors = []
         self.pos_errors = []
-
 
     @staticmethod
     def store_errors(errors, store):
@@ -184,7 +193,7 @@ class Validator:
                          error_bad_lines=False,
                          warn_bad_lines=False,
                          comment='#', 
-                         chunksize=100000)
+                         chunksize=CHUNKSIZE)
         return df
 
     def check_rows(self, csv_file):
@@ -193,11 +202,15 @@ class Validator:
         csv_file.seek(0)
         reader = csv.reader(csv_file, dialect)
         self.nrows = 0
-        for row in reader:
-            if (len(row) != len(self.header)):
-                logger.error("Length of row {c} is: {l} instead of {h}".format(c=self.nrows, l=str(len(row)), h=str(len(self.header))))
-                square = False
-            self.nrows += 1
+        try:
+            for row in reader:
+                if (len(row) != len(self.header)):
+                    logger.error("Length of row {c} is: {l} instead of {h}".format(c=self.nrows, l=str(len(row)), h=str(len(self.header))))
+                    square = False
+                self.nrows += 1
+        except csv.Error as e:
+            logger.error("There was the following error when checking the squareness of the csv: {}".format(e))
+            square = False
         return square
 
     def open_file_and_check_for_squareness(self):
@@ -205,7 +218,7 @@ class Validator:
              with gzip.open(self.file, 'rt') as f:
                  return self.check_rows(f)
         else: 
-            with open(self.file) as f:
+            with open(self.file, 'r') as f:
                  return self.check_rows(f)
 
     def validate_headers(self):
@@ -255,7 +268,7 @@ def main():
     linelimit = args.linelimit
     minrows = args.minrows
     
-    validator = Validator(file=args.f, filetype=args.filetype, logfile=args.logfile, error_limit=linelimit, minrows=minrows)
+    validator = Validator(file=args.f, filetype=args.filetype, logfile=logfile, error_limit=linelimit, minrows=minrows)
     
     if args.filetype == "curated":
         logger.info("Validating filename...")
