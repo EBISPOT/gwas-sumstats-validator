@@ -3,7 +3,7 @@ import pandas as pd
 from pandas_schema.validation import _SeriesValidation
 
 
-class InLowerInclusiveRangeValidation(_SeriesValidation):
+class InInclusiveRangeValidation(_SeriesValidation):
     """
     Checks that each element in the series is within a given inclusive
     numerical range like so x <= n < y.
@@ -20,11 +20,11 @@ class InLowerInclusiveRangeValidation(_SeriesValidation):
 
     @property
     def default_message(self):
-        return 'was not in the range {}, {})'.format(self.min, self.max)
+        return 'was not >= {} and <= {})'.format(self.min, self.max)
 
     def validate(self, series: pd.Series) -> pd.Series:
-        series = series.astype('float64')
-        return (series >= self.min) & (series < self.max)
+        series = pd.to_numeric(series, errors='coerce')
+        return (series >= self.min) & (series <= self.max)
 
 class InExclusiveRangeValidation(_SeriesValidation):
     """
@@ -41,9 +41,9 @@ class InExclusiveRangeValidation(_SeriesValidation):
 
     @property
     def default_message(self):
-        return 'was not in the range {}, {})'.format(self.min, self.max)
+        return 'was not > {} and < {})'.format(self.min, self.max)
 
     def validate(self, series: pd.Series) -> pd.Series:
-        series = series.astype('float64')
+        series = pd.to_numeric(series, errors='coerce')
         return (series > self.min) & (series < self.max)
 

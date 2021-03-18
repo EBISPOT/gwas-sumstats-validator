@@ -1,8 +1,8 @@
 from pandas_schema import Column
 import numpy as np
-from pandas_schema.validation import MatchesPatternValidation,  InListValidation,  CanConvertValidation, CustomSeriesValidation, InRangeValidation
-from validate.helpers import InLowerInclusiveRangeValidation, InExclusiveRangeValidation
-
+from pandas_schema.validation import MatchesPatternValidation,  InListValidation,  CanConvertValidation, CustomSeriesValidation
+from validate.helpers import InInclusiveRangeValidation, InExclusiveRangeValidation
+import pandas as pd
 from validate.common_constants import *
 
 
@@ -63,17 +63,17 @@ VALID_FILE_EXTENSIONS = [".tsv", ".csv", ".tsv.gz", ".csv.gz", ".gz", ".gzip", "
 SNP_VALIDATORS = {
     SNP_DSET: Column(SNP_DSET, [CanConvertValidation(DSET_TYPES[SNP_DSET]), MatchesPatternValidation(r'^rs[0-9]+$')], allow_empty=False),
     CHR_DSET: Column(CHR_DSET, [InListValidation(VALID_CHROMOSOMES)], allow_empty=True),
-    BP_DSET: Column(BP_DSET, [CanConvertValidation(DSET_TYPES[BP_DSET]), InRangeValidation(1, 999999999)], allow_empty=True),
+    BP_DSET: Column(BP_DSET, [CanConvertValidation(DSET_TYPES[BP_DSET]), InExclusiveRangeValidation(0, 999999999)], allow_empty=True),
     PVAL_DSET: Column(PVAL_DSET, [CanConvertValidation(DSET_TYPES[PVAL_DSET]),
                                   InExclusiveRangeValidation(0, 1) |
                                   (
                                           CustomSeriesValidation(
-                                              lambda x: x.str.split('e|E', expand=True)[1].fillna(value=np.nan).astype(
-                                                  'float') < -1,
+                                              lambda x: pd.to_numeric(x.str.split('e|E', expand=True)[1].fillna(value=np.nan)
+                                                                      , errors='coerce') < -1,
                                               'Numbers should be between 0 and 1') &
                                           CustomSeriesValidation(
-                                              lambda x: x.str.split('e|E', expand=True)[0].fillna(value=np.nan).astype(
-                                                  'float') > 0.0,
+                                              lambda x: pd.to_numeric(x.str.split('e|E', expand=True)[0].fillna(value=np.nan)
+                                                                      , errors='coerce') > 0,
                                               'Numbers should be between 0 and 1')
                                   )
                                   ], allow_empty=False),
@@ -90,17 +90,17 @@ SNP_VALIDATORS = {
 POS_VALIDATORS = {
     SNP_DSET: Column(SNP_DSET, [CanConvertValidation(DSET_TYPES[SNP_DSET]), MatchesPatternValidation(r'^rs[0-9]+$')], allow_empty=True),
     CHR_DSET: Column(CHR_DSET, [InListValidation(VALID_CHROMOSOMES)], allow_empty=False),
-    BP_DSET: Column(BP_DSET, [CanConvertValidation(DSET_TYPES[BP_DSET]), InRangeValidation(1, 999999999)], allow_empty=False),
+    BP_DSET: Column(BP_DSET, [CanConvertValidation(DSET_TYPES[BP_DSET]), InExclusiveRangeValidation(0, 999999999)], allow_empty=False),
     PVAL_DSET: Column(PVAL_DSET, [CanConvertValidation(DSET_TYPES[PVAL_DSET]),
                                   InExclusiveRangeValidation(0, 1) |
                                   (
                                           CustomSeriesValidation(
-                                              lambda x: x.str.split('e|E', expand=True)[1].fillna(value=np.nan).astype(
-                                                  'float') < -1,
+                                              lambda x: pd.to_numeric(x.str.split('e|E', expand=True)[1].fillna(value=np.nan)
+                                                                      , errors='coerce') < -1,
                                               'Numbers should be between 0 and 1') &
                                           CustomSeriesValidation(
-                                              lambda x: x.str.split('e|E', expand=True)[0].fillna(value=np.nan).astype(
-                                                  'float') > 0.0,
+                                              lambda x: pd.to_numeric(x.str.split('e|E', expand=True)[0].fillna(value=np.nan)
+                                                                      , errors='coerce') > 0,
                                               'Numbers should be between 0 and 1')
                                   )
                                   ], allow_empty=False),
