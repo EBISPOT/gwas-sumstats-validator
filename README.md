@@ -21,7 +21,7 @@ Information and errors are logged to the console and errors logged to the file s
 (INFO): Rows with different numbers of columns to the header are not validated
 (ERROR): {row: 1, column: "p_value"}: "-99" was not in the range [0, 1)
 ```
-The errors from the output tell us that row seven has too many columns and row one does not have a valid pvalue. If these rows are not fixed, they will later be dropped and not converted to HDF5. 
+The errors from the output tell us that row seven has too many columns and row one does not have a valid pvalue. 
 
 ### Addional options
 - `--linelimit` : _int, default 1000_
