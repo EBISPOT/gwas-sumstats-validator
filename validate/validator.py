@@ -134,9 +134,14 @@ class Validator:
 
     def process_errors(self):
         snp_rows = [error.row for error in self.snp_errors]
-        pos_rows = [error.row for error in self.pos_errors]
-        intersect_errors = [error for error in self.pos_errors if error.row in snp_rows] # error in both the snp and pos (one or the other is fine)
-        for error in intersect_errors:
+        errors = []
+        if SNP_DSET in self.header and CHR_DSET in self.header:
+            errors = [error for error in self.pos_errors if error.row in snp_rows] # error in both the snp and pos (one or the other is fine)
+        elif SNP_DSET not in self.header:
+            errors = [error for error in self.pos_errors]
+        elif CHR_DSET not in self.header:
+            errors = [error for error in self.snp_errors]
+        for error in errors:
             if len(self.bad_rows) < self.error_limit:
                 logger.error(error)
                 if error.row not in self.bad_rows:
