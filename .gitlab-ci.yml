@@ -1,6 +1,7 @@
 image: "python:3.7"
 
 stages:
+  - build
   - test
   - deploy
 
@@ -12,12 +13,14 @@ cache:
     - .cache/pip
     - venv/
 
-before_script:
-  - python -V  # Print out python version for debugging
-  - pip install virtualenv
-  - virtualenv venv
-  - source venv/bin/activate
-  - pip install -r requirements.txt
+build:
+  stage: build
+  script:
+    - python -V
+    - pip install virtualenv
+    - virtualenv venv
+    - source venv/bin/activate
+    - pip install -r requirements.txt
 
 test:
   stage: test
