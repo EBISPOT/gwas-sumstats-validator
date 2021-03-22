@@ -1,7 +1,6 @@
 image: "python:3.7"
 
 stages:
-  - build
   - test
   - deploy
 
@@ -13,9 +12,7 @@ cache:
     - .cache/pip
     - venv/
 
-build:
-  stage: build
-  script:
+before_script:
     - python -V
     - pip install virtualenv
     - virtualenv venv
