@@ -11,7 +11,7 @@ setup(
     description='GWAS summary statistics file validator',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    version='0.4.3',
+    version='0.4.4',
     packages=['validate'],
     license='Apache License, Version 2.0',
     entry_points={
