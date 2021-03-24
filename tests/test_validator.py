@@ -241,6 +241,18 @@ class BasicTestCase(unittest.TestCase):
         valid_data = validator.validate_data()
         self.assertTrue(valid_data)
 
+    def test_validate_pvalue_can_be_one(self):
+        test_filename = "small_pval.tsv"
+        test_filepath = os.path.join(self.test_storepath, test_filename)
+        logfile=test_filepath.replace('tsv', 'LOG')
+        setup_file = prep.SSTestFile(filename=test_filename)
+        setup_file.set_test_data_dict()
+        p_array = [1, '1E0', '10E-1', 1.0]
+        setup_file.test_data_dict[PVAL_DSET] = p_array
+        setup_file.prep_test_file()
+        validator = v.Validator(file=test_filepath, filetype="gwas-upload", logfile=logfile)
+        valid_data = validator.validate_data()
+        self.assertTrue(valid_data)
 
 if __name__ == '__main__':
     unittest.main()
