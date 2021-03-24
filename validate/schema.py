@@ -1,7 +1,7 @@
 from pandas_schema import Column
 import numpy as np
 from pandas_schema.validation import MatchesPatternValidation,  InListValidation,  CanConvertValidation, CustomSeriesValidation
-from validate.helpers import InInclusiveRangeValidation, InExclusiveRangeValidation
+from validate.helpers import InRangeValidationUpperInclusive, InExclusiveRangeValidation
 import pandas as pd
 from validate.common_constants import *
 
@@ -65,7 +65,7 @@ SNP_VALIDATORS = {
     CHR_DSET: Column(CHR_DSET, [InListValidation(VALID_CHROMOSOMES)], allow_empty=True),
     BP_DSET: Column(BP_DSET, [CanConvertValidation(DSET_TYPES[BP_DSET]), InExclusiveRangeValidation(0, 999999999)], allow_empty=True),
     PVAL_DSET: Column(PVAL_DSET, [CanConvertValidation(DSET_TYPES[PVAL_DSET]),
-                                  InExclusiveRangeValidation(0, 1) |
+                                  InRangeValidationUpperInclusive(0, 1) |
                                   (
                                           CustomSeriesValidation(
                                               lambda x: pd.to_numeric(x.str.split('e|E', expand=True)[1].fillna(value=np.nan)
@@ -92,7 +92,7 @@ POS_VALIDATORS = {
     CHR_DSET: Column(CHR_DSET, [InListValidation(VALID_CHROMOSOMES)], allow_empty=False),
     BP_DSET: Column(BP_DSET, [CanConvertValidation(DSET_TYPES[BP_DSET]), InExclusiveRangeValidation(0, 999999999)], allow_empty=False),
     PVAL_DSET: Column(PVAL_DSET, [CanConvertValidation(DSET_TYPES[PVAL_DSET]),
-                                  InExclusiveRangeValidation(0, 1) |
+                                  InRangeValidationUpperInclusive(0, 1) |
                                   (
                                           CustomSeriesValidation(
                                               lambda x: pd.to_numeric(x.str.split('e|E', expand=True)[1].fillna(value=np.nan)
