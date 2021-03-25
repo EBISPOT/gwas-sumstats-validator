@@ -111,8 +111,14 @@ class Validator:
         with tqdm(total=self.nrows) as pbar:
             for chunk in self.df_iterator():
                 to_validate = chunk[self.cols_to_read]
-                to_validate.columns = self.cols_to_validate # sets the headers to standard format if neeeded
-                # validate the snp column if present
+                to_validate.columns = self.cols_to_validate # sets the headers to standard format if needed
+                # validate by snp only and then position only
+                # first we need to add a dummy row with a scientific notation style pvalue
+                # if we don't do this we can't apply the pvalue validation to every chunk
+                # because they may not have any pvalues in scientific notation.
+                psplit_row = pd.Series({PVAL_DSET:'1000e1000'})
+                to_validate = to_validate.append(psplit_row, ignore_index=True)
+                self.psplit_row_index = to_validate.tail(1).index
                 if SNP_DSET in self.header:
                     self.schema = Schema([SNP_VALIDATORS[h] for h in self.cols_to_validate])
                     errors = self.schema.validate(to_validate)
@@ -121,6 +127,7 @@ class Validator:
                     self.schema = Schema([POS_VALIDATORS[h] for h in self.cols_to_validate])
                     errors = self.schema.validate(to_validate)
                     self.store_errors(errors, self.pos_errors)
+                to_validate = to_validate.drop(self.psplit_row_index)
                 self.process_errors()
                 pbar.update(CHUNKSIZE)
                 if len(self.bad_rows) >= self.error_limit:
@@ -149,10 +156,10 @@ class Validator:
         self.snp_errors = []
         self.pos_errors = []
 
-    @staticmethod
-    def store_errors(errors, store):
+    def store_errors(self, errors, store):
         for error in errors:
-            store.append(error)
+            if error.row != self.psplit_row_index:
+                store.append(error)
 
     def write_valid_lines_to_file(self):
         newfile = self.file + ".valid"
