@@ -50,7 +50,7 @@ class InExclusiveRangeValidation(_SeriesValidation):
 
 class InRangeValidationUpperInclusive(_SeriesValidation):
     """
-    Checks that each element in the series is within a given exclusive numerical range.
+    Checks that each element in the series is within a given numerical range.
     """
     def __init__(self, min: float = -math.inf, max: float = math.inf, **kwargs):
         """
