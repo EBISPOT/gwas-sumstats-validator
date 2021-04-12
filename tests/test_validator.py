@@ -4,7 +4,7 @@ import os
 import tests.prep_tests as prep
 import validate.validator as v
 from validate.common_constants import *
-import tests.test_values as test_arrays
+import hashlib
 
 
 class BasicTestCase(unittest.TestCase):
@@ -253,6 +253,23 @@ class BasicTestCase(unittest.TestCase):
         validator = v.Validator(file=test_filepath, filetype="gwas-upload", logfile=logfile)
         valid_data = validator.validate_data()
         self.assertTrue(valid_data)
+
+    def test_drop_bad_rows_does_not_drop_good_lines(self):
+        test_filepath = os.path.join(self.test_storepath, "test_file.tsv")
+        logfile=test_filepath.replace('tsv', 'LOG')
+        setup_file = prep.SSTestFile()
+        setup_file.prep_test_file()
+        validator = v.Validator(test_filepath, "gwas-upload", logfile=logfile)
+        validator.validate_data()
+        validator.write_valid_lines_to_file()
+        self.assertTrue(md5(test_filepath), md5(test_filepath + ".valid"))
+
+def md5(fname):
+    hash_md5 = hashlib.md5()
+    with open(fname, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
 
 if __name__ == '__main__':
     unittest.main()
