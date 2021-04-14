@@ -5,10 +5,10 @@ import os
 import argparse
 import pathlib
 import logging
-import pandas as pd
 from tqdm import tqdm
 from pandas_schema import Schema
 from validate.schema import *
+
 
 """
 GWAS Summary statistics file validator 
@@ -42,7 +42,7 @@ CHUNKSIZE = 100000
 
 
 class Validator:
-    def __init__(self, file, filetype, logfile="VALIDATE.log", error_limit=1000, minrows=MININMUM_ROWS):
+    def __init__(self, file, filetype, logfile="VALIDATE.log", error_limit=1000, minrows=MININMUM_ROWS, dropbad=False):
         self.file = file
         self.filetype = filetype
         self.schema = None
@@ -57,7 +57,7 @@ class Validator:
         #self.required_fields = STD_COLS
         self.valid_extensions = VALID_FILE_EXTENSIONS
         self.logfile = logfile
-        self.error_limit = int(error_limit)
+        self.error_limit = int(error_limit) if dropbad is False else None
         self.minrows = int(minrows)
         self.nrows = None
 
@@ -111,8 +111,14 @@ class Validator:
         with tqdm(total=self.nrows) as pbar:
             for chunk in self.df_iterator():
                 to_validate = chunk[self.cols_to_read]
-                to_validate.columns = self.cols_to_validate # sets the headers to standard format if neeeded
-                # validate the snp column if present
+                to_validate.columns = self.cols_to_validate # sets the headers to standard format if needed
+                # validate by snp only and then position only
+                # first we need to add a dummy row with a scientific notation style pvalue
+                # if we don't do this we can't apply the pvalue validation to every chunk
+                # because they may not have any pvalues in scientific notation.
+                psplit_row = pd.Series({PVAL_DSET:'1000e1000'})
+                to_validate = to_validate.append(psplit_row, ignore_index=True)
+                self.psplit_row_index = to_validate.tail(1).index
                 if SNP_DSET in self.header:
                     self.schema = Schema([SNP_VALIDATORS[h] for h in self.cols_to_validate])
                     errors = self.schema.validate(to_validate)
@@ -121,10 +127,12 @@ class Validator:
                     self.schema = Schema([POS_VALIDATORS[h] for h in self.cols_to_validate])
                     errors = self.schema.validate(to_validate)
                     self.store_errors(errors, self.pos_errors)
+                to_validate = to_validate.drop(self.psplit_row_index)
                 self.process_errors()
                 pbar.update(CHUNKSIZE)
-                if len(self.bad_rows) >= self.error_limit:
-                    break
+                if self.error_limit:
+                    if len(self.bad_rows) >= self.error_limit:
+                        break
             if not self.bad_rows:
                 logger.info("File is valid")
                 return True
@@ -142,17 +150,20 @@ class Validator:
         elif CHR_DSET not in self.header:
             errors = [error for error in self.snp_errors]
         for error in errors:
-            if len(self.bad_rows) < self.error_limit:
+            if self.error_limit:
+                if len(self.bad_rows) < self.error_limit:
+                    logger.error(error)
+            else:
                 logger.error(error)
-                if error.row not in self.bad_rows:
+            if error.row not in self.bad_rows:
                     self.bad_rows.append(error.row)
         self.snp_errors = []
         self.pos_errors = []
 
-    @staticmethod
-    def store_errors(errors, store):
+    def store_errors(self, errors, store):
         for error in errors:
-            store.append(error)
+            if error.row != self.psplit_row_index:
+                store.append(error)
 
     def write_valid_lines_to_file(self):
         newfile = self.file + ".valid"
@@ -177,7 +188,6 @@ class Validator:
 
     def validate_filename(self):
         self.validate_file_extension()
-        pmid, study, trait, build = None, None, None, None
         filename = self.file.split('/')[-1].split('.')[0]
         filename_parts = filename.split('-')
         if len(filename_parts) != 4:
@@ -252,7 +262,7 @@ def check_build_is_legit(build):
 
 def get_seperator(file):
     filename, file_extension = os.path.splitext(file)
-    sep =  '\t'
+    sep = '\t'
     if '.csv' in file_extension:
         sep = ','
     return sep
@@ -273,7 +283,7 @@ def main():
     linelimit = args.linelimit
     minrows = args.minrows
     
-    validator = Validator(file=args.f, filetype=args.filetype, logfile=logfile, error_limit=linelimit, minrows=minrows)
+    validator = Validator(file=args.f, filetype=args.filetype, logfile=logfile, error_limit=linelimit, minrows=minrows, dropbad=args.dropbad)
     
     if args.filetype == "curated":
         logger.info("Validating filename...")

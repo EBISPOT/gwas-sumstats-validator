@@ -32,8 +32,8 @@ class InExclusiveRangeValidation(_SeriesValidation):
     """
     def __init__(self, min: float = -math.inf, max: float = math.inf, **kwargs):
         """
-        :param min: The minimum (inclusive) value to accept
-        :param max: The maximum (inclusive) value to accept
+        :param min: The minimum (exclusive) value to accept
+        :param max: The maximum (exclusive) value to accept
         """
         self.min = min
         self.max = max
@@ -47,3 +47,24 @@ class InExclusiveRangeValidation(_SeriesValidation):
         series = pd.to_numeric(series, errors='coerce')
         return (series > self.min) & (series < self.max)
 
+
+class InRangeValidationUpperInclusive(_SeriesValidation):
+    """
+    Checks that each element in the series is within a given numerical range.
+    """
+    def __init__(self, min: float = -math.inf, max: float = math.inf, **kwargs):
+        """
+        :param min: The minimum (exclusive) value to accept
+        :param max: The maximum (inclusive) value to accept
+        """
+        self.min = min
+        self.max = max
+        super().__init__(**kwargs)
+
+    @property
+    def default_message(self):
+        return 'was not > {} and <= {})'.format(self.min, self.max)
+
+    def validate(self, series: pd.Series) -> pd.Series:
+        series = pd.to_numeric(series, errors='coerce')
+        return (series > self.min) & (series <= self.max)
