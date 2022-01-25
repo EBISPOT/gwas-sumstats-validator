@@ -36,3 +36,22 @@ The errors from the output tell us that row seven has too many columns and row o
 - `--stage` : _{'standard', 'harmonised', 'curated'}, default 'standard'_
 
    The stage the file is in. It is either standard format ('standard'), harmonised ('harmonised') or pre-standard in the custom curated format ('curated'). Recommended to leave as default.
+
+### Import ss-validate to another python script
+- Install as above
+- Import and use in your python file 
+```
+import validate.validator as ssv
+
+# initialise a validator object for your summary statistics and settings 
+validator = ssv.Validator(file='sumstats.tsv.gz', filetype='gwas-upload', error_limit=1, logfile='logfile.log')
+
+# validate the headers
+validator.validate_headers()
+
+# validate the squareness
+validator.validate_file_squareness()
+
+# validate the data
+validator.validate_data()
+```
