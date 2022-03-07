@@ -9,7 +9,8 @@ from tqdm import tqdm
 from pandas_schema import Schema
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
-from validate.schema import *
+import pandas as pd
+from validate.schema import VALIDATORS, VALID_COLS, VALID_FILE_EXTENSIONS, MININMUM_ROWS
 
 
 """
