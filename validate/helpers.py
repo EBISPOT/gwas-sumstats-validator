@@ -100,3 +100,4 @@ p_value_validation = InRangeValidationUpperInclusive(0, 1) | (
             lambda x: pd.to_numeric(x.str.split('e|E', expand=True)[0].fillna(value=np.nan)
                                     , errors='coerce') > 0,
             'Numbers should be between 0 and 1')
+)

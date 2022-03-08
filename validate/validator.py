@@ -10,7 +10,7 @@ from pandas_schema import Schema
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 import pandas as pd
-from validate.schema import VALIDATORS, VALID_COLS, VALID_FILE_EXTENSIONS, MININMUM_ROWS
+from validate.schema import SCHEMA
 
 
 """
@@ -24,10 +24,6 @@ for HDF5 convertion. The curator format validation only checks the file name,
 the table shape and the pvalue.
 """
 
-"""
-For pvalues:
-1) try to convert to scientifc then 
-"""
 
 # set field size limit but catch overflow errors
 max_int = sys.maxsize
@@ -45,10 +41,10 @@ CHUNKSIZE = 100000
 
 
 class Validator:
-    def __init__(self, file, filetype, logfile="VALIDATE.log", error_limit=1000, minrows=MININMUM_ROWS, dropbad=False):
+    def __init__(self, file, schema=SCHEMA, logfile="VALIDATE.log", error_limit=1000, minrows=SCHEMA['minimum_rows'], dropbad=False):
         self.file = file
-        self.filetype = filetype
-        self.schema = None
+        self.schema = schema
+        self.pd_schema = None
         self.header = []
         self.cols_to_validate = []
         self.cols_to_read = []
@@ -57,33 +53,25 @@ class Validator:
         self.bad_rows = []
         self.snp_errors = []
         self.pos_errors = []
-        self.valid_extensions = VALID_FILE_EXTENSIONS
+        self.valid_extensions = SCHEMA['valid_file_extensions']
         self.logfile = logfile
         self.error_limit = int(error_limit) if dropbad is False else None
         self.minrows = int(minrows)
         self.nrows = None
 
-        if self.filetype == 'curated' or self.filetype == 'gwas-upload':
-            # if curator format allow for more chromosome values
-            VALID_CHROMOSOMES.extend(['X', 'x', 'Y', 'y', 'MT', 'Mt', 'mt'])
-    
         handler = logging.FileHandler(self.logfile)
         handler.setLevel(logging.INFO)
         logger.addHandler(handler)
 
 
     def setup_field_validation(self):
+        fields = [f['label'] for f in SCHEMA['fields'].values()]
         self.header = self.get_header()
-        if self.filetype == 'curated':
-            self.required_fields = [key for key, value in CURATOR_STD_MAP.items() if value == PVAL_DSET]
-            self.cols_to_validate = [CURATOR_STD_MAP[h] for h in self.header if h in self.required_fields]
-        else:
-            self.cols_to_validate = [h for h in self.header if h in VALID_COLS]
-        self.cols_to_read = [h for h in self.header if h in VALID_COLS]
-        
+        self.cols_to_validate = [h for h in self.header if h in fields]
+
     def setup_schema(self):
         self.setup_field_validation()
-        self.schema = Schema([VALIDATORS[h] for h in self.cols_to_validate])
+        self.pd_schema = Schema([VALIDATORS[h] for h in self.cols_to_validate])
 
     def get_header(self):
         first_row = pd.read_csv(self.file, sep=self.sep, comment='#', nrows=1, index_col=False)
@@ -123,12 +111,12 @@ class Validator:
                 psplit_row = pd.Series({PVAL_DSET:'1000e1000'}, name=self.psplit_row_index)
                 to_validate = to_validate.append(psplit_row, ignore_index=False)
                 if SNP_DSET in self.header:
-                    self.schema = Schema([SNP_VALIDATORS[h] for h in self.cols_to_validate])
-                    errors = self.schema.validate(to_validate)
+                    self.pd_schema = Schema([SNP_VALIDATORS[h] for h in self.cols_to_validate])
+                    errors = self.pd_schema.validate(to_validate)
                     self.store_errors(errors, self.snp_errors)
                 if CHR_DSET and BP_DSET in self.header:
-                    self.schema = Schema([POS_VALIDATORS[h] for h in self.cols_to_validate])
-                    errors = self.schema.validate(to_validate)
+                    self.pd_schema = Schema([POS_VALIDATORS[h] for h in self.cols_to_validate])
+                    errors = self.pd_schema.validate(to_validate)
                     self.store_errors(errors, self.pos_errors)
                 self.process_errors()
                 pbar.update(CHUNKSIZE)
@@ -240,6 +228,7 @@ class Validator:
 
     def validate_headers(self):
         self.setup_field_validation()
+        mandatory_fields = self.get_mandatory_fields()
         required_is_subset = set(STD_COLS).issubset(self.header)
         if not required_is_subset:
             # check if everything but snp:
@@ -249,6 +238,11 @@ class Validator:
                 logger.error("Required headers: {} are not in the file header: {}".format(STD_COLS, self.header))
         return required_is_subset 
         
+    def get_mandatory_fields():
+        required = [f['label'] for f in SCHEMA['fields'].values() if f['mandatory']]
+        conditional = [frozenset([f['label'], SCHEMA['fields'][f['dependency']]['label']]) for f in SCHEMA['fields'].values() if 'dependency' in f]
+        conditional_list = [set(i) for i in set(conditional)]
+
 
 def check_ext(filename, ext):
     if filename.endswith(ext):
@@ -273,36 +267,25 @@ def get_seperator(file):
 def main():
     argparser = argparse.ArgumentParser()
     argparser.add_argument("-f", help='The path to the summary statistics file to be validated', required=True)
-    argparser.add_argument("--filetype", help='The type of file/stage in the process the file to be validated is in. Recommended to leave as default if unknown.', default='gwas-upload', choices=['gwas-upload','curated','standard','harmonised'])
     argparser.add_argument("--logfile", help='Provide the filename for the logs', default='VALIDATE.log')
     argparser.add_argument("--linelimit", help='Stop when this number of bad rows has been found', default=1000)
     argparser.add_argument("--minrows", help='Minimum number of rows acceptable for the file', default=MININMUM_ROWS)
     argparser.add_argument("--drop-bad-lines", help='Store the good lines from the file in a file named <summary-stats-file>.valid', action='store_true', dest='dropbad')
-    
     args = argparser.parse_args()
 
     logfile = args.logfile
     linelimit = args.linelimit
     minrows = args.minrows
     
-    validator = Validator(file=args.f, filetype=args.filetype, logfile=logfile, error_limit=linelimit, minrows=minrows, dropbad=args.dropbad)
-    
-    if args.filetype == "curated":
-        logger.info("Validating filename...")
-        if not validator.validate_filename():
-            logger.info("Invalid filename: {}".format(args.f)) 
-            logger.info("Exiting before any further checks")
-            sys.exit()
-        else:
-            logger.info("ok")
+    validator = Validator(file=args.f, logfile=logfile, error_limit=linelimit, minrows=minrows, dropbad=args.dropbad)
+
+    logger.info("Validating file extension...")
+    if not validator.validate_file_extension():
+        logger.info("Invalid file extesion: {}".format(args.f))
+        logger.info("Exiting before any further checks")
+        sys.exit()
     else:
-        logger.info("Validating file extension...")
-        if not validator.validate_file_extension():
-            logger.info("Invalid file extesion: {}".format(args.f)) 
-            logger.info("Exiting before any further checks")
-            sys.exit()
-        else:
-            logger.info("ok")
+        logger.info("ok")
 
     logger.info("Validating headers...")
     if not validator.validate_headers():
