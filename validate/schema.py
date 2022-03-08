@@ -1,93 +1,126 @@
 from pandas_schema import Column
 import numpy as np
-from pandas_schema.validation import MatchesPatternValidation, InListValidation,  CanConvertValidation, CustomSeriesValidation
-from helpers import InInclusiveRangeValidation
-
-#===============================#
-#Summary Statistic Field Labels #
-#===============================#
-
-VAR_ID_DSET = 'variant_id'
-RSID_DSET = 'rsid'
-MANTISSA_DSET = 'mantissa'
-EXP_DSET = 'exponent'
-PVAL_DSET = 'p_value'
-STUDY_DSET = 'study_accession'
-CHR_DSET = 'chromosome'
-BP_DSET = 'base_pair_location'
-OR_DSET = 'odds_ratio'
-RANGE_U_DSET = 'ci_upper'
-RANGE_L_DSET = 'ci_lower'
-BETA_DSET = 'beta'
-SE_DSET = 'standard_error'
-EFFECT_DSET = 'effect_allele'
-OTHER_DSET = 'other_allele'
-FREQ_DSET = 'effect_allele_frequency'
-HM_CODE = 'hm_code'
-
-#================================#
-# Summary Statistic Field Dtypes #
-#================================#
-
-DSET_TYPES = {VAR_ID_DSET: str,
-              STUDY_DSET: int,
-              PVAL_DSET: float,
-              MANTISSA_DSET: float,
-              EXP_DSET: int,
-              CHR_DSET: int,
-              BP_DSET: int,
-              OR_DSET: float,
-              RANGE_U_DSET: float,
-              RANGE_L_DSET: float,
-              BETA_DSET: float,
-              SE_DSET: float,
-              EFFECT_DSET: str,
-              OTHER_DSET: str,
-              FREQ_DSET: float,
-              HM_CODE: int
-              }
-
-#================================#
-# Minimum number of rows in file #
-#================================#
-
-MININMUM_ROWS = 100000
-
-#====================#
-# Fields to validate #
-#====================#
-
-VALID_COLS = (PVAL_DSET,
-              OR_DSET,
-              RANGE_L_DSET,
-              RANGE_U_DSET,
-              BETA_DSET,
-              SE_DSET,
-              FREQ_DSET,
-              EFFECT_DSET,
-              OTHER_DSET,
-              CHR_DSET,
-              BP_DSET,
-              VAR_ID_DSET
-              )
-
-#==================#
-# Mandatory fields #
-#==================#
+from helpers import InInclusiveRangeValidation, match_regex, in_list, in_range, is_dtype, p_value_validation
 
 
-#==================================#
-# Accepted chromosome values:      #
-# 1..25 where 23=X, 24=Y and 25=MT #
-#==================================#
+#==============================#
+#Summary Statistics Validation #
+#==============================#
 
-VALID_CHROMOSOMES = [str(c) for c in range(1,26)]
-
-#=================#
-# File extensions #
-#=================#
-
-VALID_FILE_EXTENSIONS = [".tsv", ".tsv.gz"]
+VALIDATION_SCHEMA = {
+    fields: {
+        VAR_ID_DSET: {
+            label: 'variant_id',
+            dtype: str,
+            mandatory: False,
+            description: 'Variant identifier in the form of \
+                          <chromosome>_<base_pair_location>_<other_allele>_<effect_allele>',
+            validation: [is_dtype(str),
+                         match_regex('[1-25]_[0-9]+_[ACTG]+_[ACTG]+')]
+        },
+        RSID_DSET: {
+            label: 'rsid',
+            dtype: str,
+            mandatory: False,
+            description: 'rsID',
+            validation: [is_dtype(str),
+                         match_regex('^rs[0-9]+$')]
+        },
+        PVAL_DSET: {
+            label: 'p_value',
+            dtype: float,
+            mandatory: True,
+            dependency: NEG_LOG_PVAL_DSET,
+            description: 'P-value of the association statistic',
+            validation: [is_dtype(float),
+                         p_value_validation]
+        },
+        NEG_LOG_PVAL_DSET: {
+            label: 'neg_log_10_p_value',
+            dtype: float,
+            mandatory: True,
+            dependency: PVAL_DSET,
+            description: 'Negative log10 P-value of the association statistic',
+            validation: is_dtype(float)
+        },
+        CHR_DSET: {
+            label: 'chromosome',
+            dtype: int,
+            mandatory: True,
+            description: None,
+            valiation: in_list([str(c) for c in range(1,26)])
+        },
+        BP_DSET: {
+            label: 'base_pair_location',
+            dtype: int,
+            mandatory: True
+        },
+        OR_DSET: {
+            label: 'odds_ratio',
+            dtype: float,
+            mandatory: True,
+            dependency: BETA_DSET
+        },
+        BETA_DSET: {
+            label: 'beta',
+            dtype: float,
+            mandatory: True,
+            dependency: OR_DSET
+        },
+        RANGE_U_DSET: {
+            label: 'ci_upper',
+            dtype: float,
+            mandatory: False,
+            description: None
+        },
+        RANGE_L_DSET: {
+            label: 'ci_lower',
+            dtype: float,
+            mandatory: False
+        },
+        SE_DSET: {
+            label: 'standard_error',
+            dtype: float,
+            mandatory: True,
+            description: None
+        },
+        EFFECT_DSET: {
+            label: 'effect_allele',
+            dtype: str,
+            mandatory: True
+        },
+        OTHER_DSET:{
+            label: 'other_allele',
+            dtype: str,
+            mandatory: True
+        },
+        FREQ_DSET: {
+            label: 'effect_allele_frequency',
+            dtype: float,
+            mandatory: True
+        },
+        INFO_DSET: {
+            label: 'info',
+            dtype: float,
+            mandatory: False
+        },
+        HM_CODE_DSET: {
+            label: 'hm_code',
+            dtype: int,
+            mandatory: False
+        },
+        SAMPLE_SIZE_DSET: {
+            label: 'n',
+            dtype: int,
+            mandatory: False
+        }
+    },
+    minimum_rows: 100000,
+    valid_file_extensions: [
+        ".tsv",
+        ".tsv.gz"
+    ]
+}
 
 
 #=============================================#

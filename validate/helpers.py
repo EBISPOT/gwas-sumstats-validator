@@ -1,6 +1,10 @@
 import math
 import pandas as pd
-from pandas_schema.validation import _SeriesValidation
+from pandas_schema.validation import (MatchesPatternValidation,
+                                      InListValidation,
+                                      CanConvertValidation,
+                                      CustomSeriesValidation,
+                                      _SeriesValidation)
 
 
 class InInclusiveRangeValidation(_SeriesValidation):
@@ -69,3 +73,30 @@ class InRangeValidationUpperInclusive(_SeriesValidation):
     def validate(self, series: pd.Series) -> pd.Series:
         series = pd.to_numeric(series, errors='coerce')
         return (series > self.min) & (series <= self.max)
+
+
+def match_regex(pattern):
+    return MatchesPatternValidation(r'{}'.format(pattern))
+
+
+def in_list(list):
+    return InListValidation(list)
+
+
+def in_range(lower, upper):
+    return InInclusiveRangeValidation(lower, upper)
+
+
+def is_dtype(dtype):
+    return CanConvertValidation(dtype)
+
+
+p_value_validation = InRangeValidationUpperInclusive(0, 1) | (
+        CustomSeriesValidation(
+            lambda x: pd.to_numeric(x.str.split('e|E', expand=True)[1].fillna(value=np.nan)
+                                    , errors='coerce') < -1,
+            'Numbers should be between 0 and 1') &
+        CustomSeriesValidation(
+            lambda x: pd.to_numeric(x.str.split('e|E', expand=True)[0].fillna(value=np.nan)
+                                    , errors='coerce') > 0,
+            'Numbers should be between 0 and 1')
