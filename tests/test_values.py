@@ -1,4 +1,4 @@
-from validate.common_constants import *
+from ss_validate.common_constants import *
 
 snpsarray = ["rs185339560", "rs11250701", "rs12345", "rs7085086"]
 pvalsarray = [0.4865, 3.7899998e-15, 0.05986, 3.7899998E-15]

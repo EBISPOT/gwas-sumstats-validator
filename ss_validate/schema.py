@@ -1,11 +1,10 @@
 from pandas_schema import Column
 import numpy as np
-from helpers import InInclusiveRangeValidation, match_regex, in_list, in_range, is_dtype, p_value_validation
+from ss_validate.helpers import InInclusiveRangeValidation, match_regex, in_list, in_range, is_dtype, p_value_validation
 
-
-#==============================#
-#Summary Statistics Validation #
-#==============================#
+#=====================================#
+#Summary Statistics Validation Schema #
+#=====================================#
 
 SCHEMA = {
     'fields': {
@@ -143,37 +142,4 @@ SCHEMA = {
         ".tsv",
         ".tsv.gz"
     ]
-}
-
-
-#=============================================#
-# Field 'validation' for pandas schema to apply #
-#=============================================#
-
-VALIDATORS = {
-    SCHEMA[fields][VAR_ID_DSET][''label'']: Column(SCHEMA[fields][VAR_ID_DSET][''label''], Column(SCHEMA[fields][VAR_ID_DSET][''validation''], allow_empty = not Column(SCHEMA[fields][VAR_ID_DSET][''mandatory''])
-    SNP_DSET: Column(SNP_DSET, [CanConvertValidation(DSET_TYPES[SNP_DSET]), MatchesPatternValidation(r'^rs[0-9]+$')], allow_empty=False),
-    CHR_DSET: Column(CHR_DSET, [InListValidation(VALID_CHROMOSOMES)], allow_empty=True),
-    BP_DSET: Column(BP_DSET, [CanConvertValidation(DSET_TYPES[BP_DSET]), InExclusiveRangeValidation(0, 999999999)], allow_empty=True),
-    PVAL_DSET: Column(PVAL_DSET, [CanConvertValidation(DSET_TYPES[PVAL_DSET]),
-                                  InRangeValidationUpperInclusive(0, 1) |
-                                  (
-                                          CustomSeriesValidation(
-                                              lambda x: pd.to_numeric(x.str.split('e|E', expand=True)[1].fillna(value=np.nan)
-                                                                      , errors='coerce') < -1,
-                                              'Numbers should be between 0 and 1') &
-                                          CustomSeriesValidation(
-                                              lambda x: pd.to_numeric(x.str.split('e|E', expand=True)[0].fillna(value=np.nan)
-                                                                      , errors='coerce') > 0,
-                                              'Numbers should be between 0 and 1')
-                                  )
-                                  ], allow_empty=False),
-    OR_DSET: Column(OR_DSET, [CanConvertValidation(DSET_TYPES[OR_DSET])], allow_empty=True),
-    RANGE_U_DSET: Column(RANGE_U_DSET, [CanConvertValidation(float)], allow_empty=True),
-    RANGE_L_DSET: Column(RANGE_L_DSET, [CanConvertValidation(float)], allow_empty=True),
-    BETA_DSET: Column(BETA_DSET, [CanConvertValidation(float)], allow_empty=True),
-    SE_DSET: Column(SE_DSET, [CanConvertValidation(float)], allow_empty=True),
-    EFFECT_DSET: Column(EFFECT_DSET, [MatchesPatternValidation(r'^[ACTGNactgn]+$')], allow_empty=True),
-    OTHER_DSET: Column(OTHER_DSET, [MatchesPatternValidation(r'^[ACTGNactgn]+$')], allow_empty=True),
-    FREQ_DSET: Column(FREQ_DSET, [CanConvertValidation(float)], allow_empty=True)
 }

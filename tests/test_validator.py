@@ -2,8 +2,8 @@ import unittest
 import shutil
 import os
 import tests.prep_tests as prep
-import validate.validator as v
-from validate.common_constants import *
+import ss_validate.validator as v
+from ss_validate.common_constants import *
 import hashlib
 
 
