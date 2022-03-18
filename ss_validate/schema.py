@@ -15,7 +15,7 @@ SCHEMA = {
             'description': 'Variant identifier in the form of \
                           <chromosome>_<base_pair_location>_<other_allele>_<effect_allele>',
             'validation': [is_dtype(str),
-                           match_regex('[1-25]_[0-9]+_[ACTG]+_[ACTG]+')]
+                           match_regex('^[0-9]+_[0-9]+_[ACTG]+_[ACTG]+$')]
         },
         'RSID': {
             'label': 'rsid',
@@ -40,7 +40,8 @@ SCHEMA = {
             'mandatory': True,
             'dependency': 'PVAL',
             'description': 'Negative log10 P-value of the association statistic',
-            'validation': [is_dtype(float)]
+            'validation': [is_dtype(float),
+                           in_range(lower=0)]
         },
         'CHR': {
             'label': 'chromosome',
@@ -63,7 +64,8 @@ SCHEMA = {
             'mandatory': True,
             'dependency': 'BETA',
             'description': 'Odds ratio',
-            'validation': [is_dtype(float)]
+            'validation': [is_dtype(float),
+                           in_range(lower=0)]
         },
         'BETA': {
             'label': 'beta',
@@ -71,28 +73,32 @@ SCHEMA = {
             'mandatory': True,
             'dependency': 'OR',
             'description': 'Beta',
-            'validation': [is_dtype(float)]
+            'validation': [is_dtype(float),
+                           in_range()]
         },
         'RANGE_U': {
             'label': 'ci_upper',
             'dtype': float,
             'mandatory': False,
             'description': 'Upper confidence interval',
-            'validation': [is_dtype(float)]
+            'validation': [is_dtype(float),
+                           in_range()]
         },
         'RANGE_L': {
             'label': 'ci_lower',
             'dtype': float,
             'mandatory': False,
             'description': 'Lower confidence interval',
-            'validation': [is_dtype(float)]
+            'validation': [is_dtype(float),
+                           in_range()]
         },
         'SE': {
             'label': 'standard_error',
             'dtype': float,
             'mandatory': True,
             'description': 'Standard error',
-            'validation': [is_dtype(float)]
+            'validation': [is_dtype(float),
+                           in_range()]
         },
         'EFFECT': {
             'label': 'effect_allele',
@@ -113,14 +119,16 @@ SCHEMA = {
             'dtype': float,
             'mandatory': True,
             'description': 'Frequency of the effect allele',
-            'validation': [is_dtype(float)]
+            'validation': [is_dtype(float),
+                           in_range(0, 1)]
         },
         'INFO': {
             'label': 'info',
             'dtype': float,
             'mandatory': False,
             'description': 'Imputation information metric',
-            'validation': [is_dtype(float)]
+            'validation': [is_dtype(float),
+                           in_range()]
         },
         'HM_CODE': {
             'label': 'hm_code',
@@ -134,7 +142,8 @@ SCHEMA = {
             'dtype': int,
             'mandatory': False,
             'description': 'Sample size',
-            'validation': [is_dtype(int)]
+            'validation': [is_dtype(int),
+                           in_range(lower=0)]
         }
     },
     'minimum_rows': 100000,

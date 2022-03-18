@@ -81,10 +81,10 @@ def match_regex(pattern):
 
 
 def in_list(list):
-    return InListValidation(list)
+    return InListValidation(list, message="is not an accepted value.")
 
 
-def in_range(lower, upper):
+def in_range(lower=-math.inf, upper=math.inf):
     return InInclusiveRangeValidation(lower, upper)
 
 
