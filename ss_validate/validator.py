@@ -106,7 +106,8 @@ class Validator:
             for column in self.header:
                 self.validate_column(column)
                 pbar.update(1)
-        self.evaluate_errors()
+        status = self.evaluate_errors()
+        return status
 
     def write_temp_error_file(self):
         self.errors_df.to_parquet(self.error_outfile, index=True)
@@ -156,19 +157,28 @@ class Validator:
         error_df = pd.read_parquet(self.error_outfile)
         if len(error_df) > 0:
             error_df.sort_values(by=['row'], inplace=True)
-            self.rows_to_drop = pd.read_parquet(self.error_outfile, columns=['row'])['row'].tolist()
+            self.rows_to_drop = pd.read_parquet(self.error_outfile, columns=['row'])['row'].unique().tolist()
             error_count = error_df.drop(columns=['row']).count()
-            logger.error("Error count per column: \n{}".format(error_count))
-            logger.error("Full list of errors:\n{}".format(tabulate(error_df,
+            logger.error("Some rows have errors. Summary is as follows: \n{}".format(error_count))
+            logger.error("A full list of errors is as follows:\n{}".format(tabulate(error_df,
                                                                     headers='keys',
                                                                     tablefmt='psql',
                                                                     showindex=False)))
+            return False
+        return True
 
     def col_to_df(self, column_label):
         df = pd.read_table(self.file,
                            sep=self.sep,
                            dtype=str,
                            usecols=[column_label])
+        # Below we check if p_value column and add a valid scientific notation value
+        # which gives the custom validator an 'e' to split on.
+        p_val_label = self.schema['fields']['PVAL']['label']
+        if column_label == p_val_label:
+            psplit_row = pd.Series({p_val_label:'1e-1000'})
+            psplit_row.name = -99
+            df = df.append(psplit_row)
         return df
 
     def construct_validator(self, column_label):
@@ -342,9 +352,6 @@ def main():
     drop_bad = args.dropbad
     logfile = args.logfile
 
-    if drop_bad:
-        logger.info("--drop-bad-lines set to True, setting --errorlimit to None")
-        errorlimit = None
 
     validator = Validator(file=args.f,
                           logfile=logfile,
