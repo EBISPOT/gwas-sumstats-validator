@@ -6,7 +6,6 @@ import argparse
 import pathlib
 import logging
 from tqdm import tqdm
-from tabulate import tabulate
 from pandas_schema import Schema, Column
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -16,17 +15,6 @@ from ss_validate.schema import SCHEMA
 
 """
 GWAS Summary statistics file validator using pandas_schema https://github.com/TMiguelT/PandasSchema
-- check filetype
-- read in header - check for mandatory
-- for each column:
-        - read in whole column 
-        - sani check row number (all columns need the same numnber else not square)
-        - row number needs to exceed min rows
-        - if in schema: 
-                ss_validate - store error row number in column object?
-                - if not conditional column - stop at error limit
-- calculate errors:
-        - some cols are conditional on others
 """
 
 
@@ -39,31 +27,34 @@ while True:
     except OverflowError:
         max_int = int(max_int/10)
 
-CHUNKSIZE = 100000
 
 logging.basicConfig(level=logging.INFO, format='(%(levelname)s): %(message)s')
 logger = logging.getLogger(__name__)
 
 
 class Validator:
-    def __init__(self, file, logfile='VALIDATE.log', schema=SCHEMA, error_limit=1000, minrows=SCHEMA['minimum_rows'], dropbad=False):
+    def __init__(self,
+                 file,
+                 logfile='VALIDATE.log',
+                 schema=SCHEMA,
+                 error_limit=1000,
+                 minrows=SCHEMA['minimum_rows'],
+                 dropbad=False,
+                 chunksize=100000):
         self.file = file
-        self.file_label = self.get_file_label()
-        self.error_outfile = '.temp_validator_{fl}.parquet'.format(fl=self.file_label)
-        self.errors_df = pd.DataFrame(columns=['row'])
         self.schema = schema
-        self.pd_schema = None
         self.header = []
         self.conditional_fields = []
         self.rows_to_drop = []
         self.cols_to_validate = []
-        self.columns_with_errors = []
-        self.sep = get_seperator(self.file) 
+        self.sep = get_seperator(self.file)
         self.errors = []
         self.valid_extensions = SCHEMA['valid_file_extensions']
         self.error_limit = int(error_limit) if dropbad is False else None
         self.minrows = int(minrows)
         self.nrows = None
+        self.psplit_row_index = -99
+        self.chunksize = chunksize
 
         handler = logging.FileHandler(logfile)
         handler.setLevel(logging.INFO)
@@ -73,10 +64,6 @@ class Validator:
         fields = [f['label'] for f in SCHEMA['fields'].values()]
         self.header = self.get_header()
         self.cols_to_validate = [h for h in self.header if h in fields]
-
-    def setup_schema(self):
-        self.setup_field_validation()
-        self.pd_schema = Schema([VALIDATORS[h] for h in self.cols_to_validate])
 
     def get_header(self):
         first_row = pd.read_csv(self.file, sep=self.sep, comment='#', nrows=1, index_col=False)
@@ -101,44 +88,46 @@ class Validator:
 
     def validate_data(self):
         self.setup_field_validation()
-        self.write_temp_error_file()
-        with tqdm(total=len(self.header)) as pbar:
-            for column in self.header:
-                self.validate_column(column)
-                pbar.update(1)
-        status = self.evaluate_errors()
-        return status
+        with tqdm(total=self.nrows) as pbar:
+            for chunk in self.df_iterator():
+                to_validate = self.setup_df_for_validation(chunk)
+                pd_schema = self.construct_validator(self.cols_to_validate)
+                errors = pd_schema.validate(to_validate)
+                self.store_errors(errors, self.errors)
+                stop = self.check_if_exceeding_line_limit()
+                self.evaluate_errors()
+                pbar.update(self.chunksize)
+                if stop:
+                    sys.exit()
+            if self.rows_to_drop:
+                logger.info("File is invalid - {} rows with errors, limit set to {}".format(len(self.rows_to_drop), self.error_limit))
+                return False
+            logger.info("File is valid")
+            return True
 
-    def write_temp_error_file(self):
-        self.errors_df.to_parquet(self.error_outfile, index=True)
+    def setup_df_for_validation(self, df):
+        """
+        A dummy row with a scientific notation style pvalue is added.
+        If we don't do this we can't apply the pvalue validation to every chunk
+        because they may not have any pvalues in scientific notation.
+        set the psplit row index to -99 so that we can filter it out.
+        """
+        to_validate = df[self.cols_to_validate]
+        p_val_label = self.schema['fields']['PVAL']['label']
+        psplit_row = pd.Series({p_val_label: '1000e1000'}, name=self.psplit_row_index)
+        to_validate = to_validate.append(psplit_row, ignore_index=False)
+        return to_validate
 
-    def temp_error_file_to_df(self):
-        df = pd.read_parquet(self.error_outfile)
-        return df
-
-    def remove_temp_error_file(self):
-        os.remove(self.error_outfile)
-
-    def validate_column(self, column_label):
-        logger.info("Validating column: {}".format(column_label))
-        column_df = self.col_to_df(column_label)
-        pd_schema = self.construct_validator(column_label)
-        col_errors_df = pd.DataFrame()
-        if pd_schema:
-            errors = pd_schema.validate(column_df)
-            error_data = [(error.row, ' '.join([str(error.value), error.message])) for error in errors]
-            if error_data:
-                self.columns_with_errors.append(column_label)
-                col_errors_df = col_errors_df.from_records(error_data, columns=['row', column_label])
-                self.errors_df = self.merge_with_existing_errors(col_errors_df)
-                self.write_temp_error_file()
-                self.check_if_exceeding_line_limit()
+    def store_errors(self, errors, store):
+        for error in errors:
+            if error.row != self.psplit_row_index:
+                store.append(error)
 
     def check_if_exceeding_line_limit(self):
-        if self.error_limit and len(self.errors_df) >= self.error_limit:
+        if self.error_limit and len(self.errors) >= self.error_limit:
             logger.error("Reached limit of {} errors. Stopping validation process now.".format(self.error_limit))
-            self.evaluate_errors()
-            sys.exit()
+            return True
+        return False
 
     def find_column_dependency(self, column_to_check):
         dependent_column = None
@@ -147,53 +136,32 @@ class Validator:
                 dependent_column = list(pair - {column_to_check})[0]
         return dependent_column
 
-    def merge_with_existing_errors(self, col_errors_df):
-        existing_errors = self.temp_error_file_to_df()
-        merged_df = pd.merge(existing_errors, col_errors_df, on='row', how='outer')
-        merged_df.reindex(['row'])
-        return merged_df
-
     def evaluate_errors(self):
-        error_df = pd.read_parquet(self.error_outfile)
-        if len(error_df) > 0:
-            error_df.sort_values(by=['row'], inplace=True)
-            self.rows_to_drop = pd.read_parquet(self.error_outfile, columns=['row'])['row'].unique().tolist()
-            error_count = error_df.drop(columns=['row']).count()
-            logger.error("Some rows have errors. Summary is as follows: \n{}".format(error_count))
-            logger.error("A full list of errors is as follows:\n{}".format(tabulate(error_df,
-                                                                    headers='keys',
-                                                                    tablefmt='psql',
-                                                                    showindex=False)))
-            return False
-        return True
+        if len(self.errors) > 0:
+            for error in self.errors:
+                if error.row not in self.rows_to_drop:
+                    self.rows_to_drop.append(error.row)
+                    if self.error_limit:
+                        if len(self.rows_to_drop) <= self.error_limit:
+                            logger.error(error)
+                        else:
+                            break
 
-    def col_to_df(self, column_label):
-        df = pd.read_table(self.file,
-                           sep=self.sep,
-                           dtype=str,
-                           usecols=[column_label])
-        # Below we check if p_value column and add a valid scientific notation value
-        # which gives the custom validator an 'e' to split on.
-        p_val_label = self.schema['fields']['PVAL']['label']
-        if column_label == p_val_label:
-            psplit_row = pd.Series({p_val_label:'1e-1000'})
-            psplit_row.name = -99
-            df = df.append(psplit_row)
-        return df
-
-    def construct_validator(self, column_label):
-        validator = None
-        field_id = self.field_id_from_column_label(column_label)
-        if field_id:
-            validator = Schema([Column(column_label,
-                               self.prop_from_field(field_id, 'validation'),
-                               allow_empty = not self.prop_from_field(field_id, 'mandatory')
-                               )])
+    def construct_validator(self, column_list):
+        validator_list = []
+        for column_label in column_list:
+            field_id = self.field_id_from_column_label(column_label)
+            if field_id:
+                validator_list.append(Column(column_label,
+                                             self.prop_from_field(field_id, 'validation'),
+                                             allow_empty = not self.prop_from_field(field_id, 'mandatory')
+                                             )
+                                      )
+        validator = Schema(validator_list) if validator_list else None
         return validator
 
     def prop_from_field(self, field_id, property):
         return self.schema['fields'][field_id][property]
-
 
     def field_id_from_column_label(self, column_label):
         column_id = None
@@ -201,7 +169,6 @@ class Validator:
             if props['label'] == column_label:
                 column_id = field
         return column_id
-
 
     def write_valid_lines_to_file(self):
         newfile = self.file + ".valid"
@@ -214,7 +181,7 @@ class Validator:
                     first_chunk = False
                 else:
                     chunk.to_csv(newfile, mode='a', header=False, sep='\t', index=False, na_rep='NA')
-                pbar.update(CHUNKSIZE)
+                pbar.update(self.chunksize)
 
     def validate_file_extension(self):
         check_exts = [check_ext(self.file, ext) for ext in self.valid_extensions]
@@ -223,23 +190,6 @@ class Validator:
             return False
         return True
 
-    def validate_filename(self):
-        self.validate_file_extension()
-        filename = self.file.split('/')[-1].split('.')[0]
-        filename_parts = filename.split('-')
-        if len(filename_parts) != 4:
-            logger.error("Filename: {} should follow the pattern <pmid>-<study>-<trait>-build>.tsv".format(filename))
-            return False
-        else:
-            pmid, study, trait, build = filename_parts
-        if not check_build_is_legit(build):
-            logger.error("Build: {} is not an accepted build value".format(build))
-            return False
-        logger.info("Filename looks good!")
-        return True
-
-    def get_file_label(self):
-        return pathlib.Path(self.file).stem
 
     def df_iterator(self):
         df = pd.read_csv(self.file, 
@@ -248,7 +198,7 @@ class Validator:
                          error_bad_lines=False,
                          warn_bad_lines=False,
                          comment='#', 
-                         chunksize=CHUNKSIZE)
+                         chunksize=self.chunksize)
         return df
 
     def check_rows(self, csv_file):
@@ -309,15 +259,6 @@ def check_ext(filename, ext):
         return True
     return False
 
-
-def check_build_is_legit(build):
-    build_string = build.lower()
-    build_number = build_string.replace('build', '')
-    if build_number in BUILD_MAP.keys():
-        return True
-    return False
-
-
 def get_seperator(file):
     filename, file_extension = os.path.splitext(file)
     sep = '\t'
@@ -328,40 +269,41 @@ def get_seperator(file):
 
 def main():
     argparser = argparse.ArgumentParser()
-    argparser.add_argument("-f",
+    argparser.add_argument("-f", "--file",
                            help='The path to the summary statistics file to be validated',
                            required=True)
-    argparser.add_argument("--logfile",
+    argparser.add_argument("-l", "--logfile",
                            help='Provide the filename for the logs',
                            default='VALIDATE.log')
-    argparser.add_argument("--errorlimit",
-                           help='Stop when this number of bad rows has been found',
+    argparser.add_argument("-e", "--linelimit",
+                           help='Stop when this number of rows with errors has been found',
                            default=1000)
-    argparser.add_argument("--minrows",
+    argparser.add_argument("-m", "--minrows",
                            help='Minimum number of rows acceptable for the file',
                            default=SCHEMA['minimum_rows'])
-    argparser.add_argument("--drop-bad-lines",
+    argparser.add_argument("-d", "--drop-bad-rows",
                            help='Store the good lines from the file in a file named <summary-stats-file>.valid. \
-                                 If this option is used, --errorlimit will be set to None',
+                                 If this option is used, --linelimit will be set to None',
                            action='store_true',
                            dest='dropbad')
     args = argparser.parse_args()
 
-    errorlimit = args.errorlimit
+    file_to_validate = args.file
+    error_limit = args.linelimit
     minrows = args.minrows
     drop_bad = args.dropbad
     logfile = args.logfile
 
 
-    validator = Validator(file=args.f,
+    validator = Validator(file=file_to_validate,
                           logfile=logfile,
-                          error_limit=errorlimit,
+                          error_limit=error_limit,
                           minrows=minrows,
-                          dropbad=args.dropbad)
+                          dropbad=drop_bad)
 
     logger.info("Validating file extension...")
     if not validator.validate_file_extension():
-        logger.info("Invalid file extesion: {}".format(args.f))
+        logger.info("Invalid file extesion: {}".format(file_to_validate))
         logger.info("Exiting before any further checks")
         sys.exit()
     else:
@@ -391,10 +333,8 @@ def main():
     logger.info("Validating data...")
     validator.validate_data()
     if drop_bad:
-        logger.info("Writing good lines to {}.valid".format(args.f))
+        logger.info("Writing good lines to {}.valid".format(file_to_validate))
         validator.write_valid_lines_to_file()
-
-    validator.remove_temp_error_file()
 
 
 if __name__ == '__main__':
