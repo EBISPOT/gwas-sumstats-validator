@@ -14,7 +14,7 @@ cache:
 
 before_script:
     - python -V
-    - pip install virtualenv
+    - pip install virtualenv build
     - virtualenv venv
     - source venv/bin/activate
     - pip install -r requirements.txt
@@ -32,7 +32,7 @@ test:
 deploy_test:
   stage: deploy
   script:
-    - python setup.py sdist bdist_wheel
+    - python -m build
     - python -m twine upload -u $PYPI_USER_TEST -p $PYPI_PWD_TEST --repository testpypi dist/*
   tags:
     - gwas
@@ -42,7 +42,7 @@ deploy_test:
 deploy_prod:
   stage: deploy
   script:
-    - python setup.py sdist bdist_wheel
+    - python -m build
     - python -m twine upload -u $PYPI_USER -p $PYPI_PWD --repository pypi dist/*
   tags:
     - gwas
