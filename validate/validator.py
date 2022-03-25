@@ -7,6 +7,8 @@ import pathlib
 import logging
 from tqdm import tqdm
 from pandas_schema import Schema
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 from validate.schema import *
 
 
@@ -54,7 +56,6 @@ class Validator:
         self.bad_rows = []
         self.snp_errors = []
         self.pos_errors = []
-        #self.required_fields = STD_COLS
         self.valid_extensions = VALID_FILE_EXTENSIONS
         self.logfile = logfile
         self.error_limit = int(error_limit) if dropbad is False else None
@@ -116,9 +117,10 @@ class Validator:
                 # first we need to add a dummy row with a scientific notation style pvalue
                 # if we don't do this we can't apply the pvalue validation to every chunk
                 # because they may not have any pvalues in scientific notation.
-                psplit_row = pd.Series({PVAL_DSET:'1000e1000'})
-                to_validate = to_validate.append(psplit_row, ignore_index=True)
-                self.psplit_row_index = to_validate.tail(1).index
+                # set the psplit row index to -99 so that we can filter it out.
+                self.psplit_row_index = -99
+                psplit_row = pd.Series({PVAL_DSET:'1000e1000'}, name=self.psplit_row_index)
+                to_validate = to_validate.append(psplit_row, ignore_index=False)
                 if SNP_DSET in self.header:
                     self.schema = Schema([SNP_VALIDATORS[h] for h in self.cols_to_validate])
                     errors = self.schema.validate(to_validate)
@@ -127,7 +129,6 @@ class Validator:
                     self.schema = Schema([POS_VALIDATORS[h] for h in self.cols_to_validate])
                     errors = self.schema.validate(to_validate)
                     self.store_errors(errors, self.pos_errors)
-                to_validate = to_validate.drop(self.psplit_row_index)
                 self.process_errors()
                 pbar.update(CHUNKSIZE)
                 if self.error_limit:
