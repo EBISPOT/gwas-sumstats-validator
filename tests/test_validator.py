@@ -3,7 +3,7 @@ import shutil
 import os
 import tests.prep_tests as prep
 import validate.validator as v
-from validate.common_constants import *
+from validate.schema import *
 import hashlib
 
 

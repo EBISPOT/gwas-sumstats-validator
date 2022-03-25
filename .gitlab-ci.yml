@@ -23,20 +23,29 @@ test:
   stage: test
   script:
     - pytest -v
+  tags:
+    - gwas
+  only:
+    - master
+    - dev
 
 deploy_test:
   stage: deploy
   script:
-    - python setup.py sdist bdist_wheel
+    - python -m build
     - python -m twine upload -u $PYPI_USER_TEST -p $PYPI_PWD_TEST --repository testpypi dist/*
+  tags:
+    - gwas
   only:
     - master
 
 deploy_prod:
   stage: deploy
   script:
-    - python setup.py sdist bdist_wheel
+    - python -m build
     - python -m twine upload -u $PYPI_USER -p $PYPI_PWD --repository pypi dist/*
+  tags:
+    - gwas
   when: manual
   only:
     - tags
