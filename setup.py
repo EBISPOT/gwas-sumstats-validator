@@ -19,5 +19,8 @@ setup(
     },
     url='https://github.com/EBISPOT/gwas-sumstats-validator',
     author='EBI SPOT',
-    author_email='gwas-info@ebi.ac.uk'
+    author_email='gwas-info@ebi.ac.uk',
+    install_requires=['pandas_schema>=0.3.4',
+                  'tqdm>=4.48.2'
+                 ]
 )
