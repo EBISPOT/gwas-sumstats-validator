@@ -129,11 +129,21 @@ class Validator:
             return True
         return False
 
+    def get_schema_columns_order(self):
+        cols_to_check = {}
+        for f in self.schema['fields'].values():
+            if 'column_index' in f:
+                if f['column_index'] in cols_to_check:
+                    cols_to_check[f['column_index']].append(f['label'])
+                else:
+                    cols_to_check[f['column_index']] = [f['label']]
+        return cols_to_check
+
     def find_column_dependency(self, column_to_check):
         dependent_column = None
-        for pair in self.conditional_fields:
-            if column_to_check in pair:
-                dependent_column = list(pair - {column_to_check})[0]
+        for fields in self.conditional_fields:
+            if column_to_check in fields:
+                dependent_column = list(fields - {column_to_check})[0]
         return dependent_column
 
     def evaluate_errors(self):
@@ -229,19 +239,15 @@ class Validator:
                  return self.check_rows(f)
 
     def validate_headers(self):
+        missing = []
         self.setup_field_validation()
-        mandatory_fields = self.get_mandatory_fields()
-        self.conditional_fields = self.get_conditional_fields()
-        required_is_subset = set(mandatory_fields).issubset(self.header)
-        if not required_is_subset:
-            missing_fields = list(set(mandatory_fields) - set(self.header))
-            report_missing = []
-            for field in missing_fields:
-                if self.find_column_dependency(field) not in self.header:
-                    report_missing.append(field)
-            if len(report_missing) > 0:
-                logger.error("Mandatory field(s) missing: {}".format(report_missing))
-                return False
+        orders_fields = self.get_schema_columns_order()
+        for index, fields in orders_fields.items():
+            if self.header[index] not in fields:
+                missing.append(fields)
+        if len(missing) > 0:
+            logger.error("The following fields where either missing or in the wrong order: {}".format(missing))
+            return False
         return True
 
     def get_mandatory_fields(self):

@@ -27,24 +27,27 @@ SCHEMA = {
         },
         'PVAL': {
             'label': 'p_value',
+            'column_index': 7,
             'dtype': float,
             'mandatory': True,
-            'dependency': 'NEG_LOG_PVAL',
+            'column_type': 'p_value',
             'description': 'P-value of the association statistic',
             'validation': [is_dtype(float),
                            p_value_validation]
         },
         'NEG_LOG_PVAL': {
             'label': 'neg_log_10_p_value',
+            'column_index': 7,
             'dtype': float,
             'mandatory': True,
-            'dependency': 'PVAL',
+            'column_type': 'p_value',
             'description': 'Negative log10 P-value of the association statistic',
             'validation': [is_dtype(float),
                            in_range(lower=0)]
         },
         'CHR': {
             'label': 'chromosome',
+            'column_index': 0,
             'dtype': int,
             'mandatory': True,
             'description': 'Chromosome where the variant is located (X=23, Y=24, MT=25)',
@@ -52,6 +55,7 @@ SCHEMA = {
         },
         'BP': {
             'label': 'base_pair_location',
+            'column_index': 1,
             'dtype': int,
             'mandatory': True,
             'description': 'The first position of the variant in the reference, counting on the bases, from 1 (1-based)',
@@ -60,21 +64,33 @@ SCHEMA = {
         },
         'OR': {
             'label': 'odds_ratio',
+            'column_index': 4,
             'dtype': float,
             'mandatory': True,
-            'dependency': 'BETA',
+            'field_type': 'effect_size',
             'description': 'Odds ratio',
             'validation': [is_dtype(float),
                            in_range(lower=0)]
         },
         'BETA': {
             'label': 'beta',
+            'column_index': 4,
             'dtype': float,
             'mandatory': True,
-            'dependency': 'OR',
+            'field_type': 'effect_size',
             'description': 'Beta',
             'validation': [is_dtype(float),
                            in_range()]
+        },
+        'HR': {
+            'label': 'hazard_ratio',
+            'column_index': 4,
+            'dtype': float,
+            'mandatory': True,
+            'field_type': 'effect_size',
+            'description': 'Hazard ratio',
+            'validation': [is_dtype(float),
+                           in_range(lower=0)]
         },
         'RANGE_U': {
             'label': 'ci_upper',
@@ -94,6 +110,7 @@ SCHEMA = {
         },
         'SE': {
             'label': 'standard_error',
+            'column_index': 5,
             'dtype': float,
             'mandatory': True,
             'description': 'Standard error',
@@ -102,6 +119,7 @@ SCHEMA = {
         },
         'EFFECT': {
             'label': 'effect_allele',
+            'column_index': 2,
             'dtype': str,
             'mandatory': True,
             'description': 'Allele associated with the effect',
@@ -109,6 +127,7 @@ SCHEMA = {
         },
         'OTHER':{
             'label': 'other_allele',
+            'column_index': 3,
             'dtype': str,
             'mandatory': True,
             'description': 'The non-effect allele',
@@ -116,6 +135,7 @@ SCHEMA = {
         },
         'EAF': {
             'label': 'effect_allele_frequency',
+            'column_index': 6,
             'dtype': float,
             'mandatory': True,
             'description': 'Frequency of the effect allele',

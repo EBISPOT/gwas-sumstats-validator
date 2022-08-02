@@ -5,6 +5,7 @@ import tests.prep_tests as prep
 import ss_validate.validator as v
 from ss_validate.schema import SCHEMA
 import hashlib
+from collections import OrderedDict
 
 
 class BasicTestCase(unittest.TestCase):
@@ -40,6 +41,16 @@ class BasicTestCase(unittest.TestCase):
         valid_headers = validator.validate_headers()
         self.assertTrue(valid_headers)
 
+    def test_validate_or_instead_of_beta(self):
+        test_filepath = os.path.join(self.test_storepath, "test_file.tsv")
+        setup_file = prep.SSTestFile()
+        d = setup_file.test_data_dict
+        OrderedDict((SCHEMA['fields']['OR']['label'] if k == SCHEMA['fields']['BETA']['label'] else k, v) for k, v in d.items())
+        setup_file.prep_test_file()
+        validator = v.Validator(test_filepath, logfile=test_filepath + ".LOG")
+        valid_headers = validator.validate_headers()
+        self.assertTrue(valid_headers)
+
     def test_validate_file_headers_missing_snp(self):
         test_filepath = os.path.join(self.test_storepath, "test_file.tsv")
         setup_file = prep.SSTestFile()
@@ -65,6 +76,17 @@ class BasicTestCase(unittest.TestCase):
         setup_file = prep.SSTestFile()
         setup_file.set_test_data_dict()
         setup_file.test_data_dict.pop(SCHEMA['fields']['PVAL']['label']) # remove a mandatory field
+        setup_file.prep_test_file()
+        validator = v.Validator(test_filepath, logfile=test_filepath + ".LOG")
+        valid_headers = validator.validate_headers()
+        self.assertFalse(valid_headers)
+
+    def test_validate_file_headers_in_wrong_order(self):
+        test_filepath = os.path.join(self.test_storepath, "test_file.tsv")
+        setup_file = prep.SSTestFile()
+        setup_file.set_test_data_dict()
+        chr = setup_file.test_data_dict.pop(SCHEMA['fields']['CHR']['label'])
+        setup_file.test_data_dict[SCHEMA['fields']['CHR']['label']] = chr
         setup_file.prep_test_file()
         validator = v.Validator(test_filepath, logfile=test_filepath + ".LOG")
         valid_headers = validator.validate_headers()
@@ -318,8 +340,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(valid_data)
         with open(test_filepath + ".valid", 'r') as f:
             self.assertEqual(len(f.readlines()), 3)
-
-
 
 
 def md5(fname):

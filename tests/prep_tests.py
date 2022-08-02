@@ -1,6 +1,7 @@
 from tests.test_values import *
 from ss_validate.schema import SCHEMA
 import pandas as pd
+from collections import OrderedDict
 
 
 class SSTestFile:
@@ -20,18 +21,18 @@ class SSTestFile:
 
 
     def prepare_dictionary(self):
-        return {
-                SCHEMA['fields']['RSID']['label']: snpsarray,
-                SCHEMA['fields']['PVAL']['label']: pvalsarray,
+        return OrderedDict({
                 SCHEMA['fields']['CHR']['label']: chrarray,
-                SCHEMA['fields']['OR']['label']: orarray,
                 SCHEMA['fields']['BP']['label']: bparray,
                 SCHEMA['fields']['EFFECT']['label']: effectarray,
                 SCHEMA['fields']['OTHER']['label']: otherarray,
-                SCHEMA['fields']['EAF']['label']: frequencyarray,
-                SCHEMA['fields']['SE']['label']: searray,
                 SCHEMA['fields']['BETA']['label']: betaarray,
+                SCHEMA['fields']['SE']['label']: searray,
+                SCHEMA['fields']['EAF']['label']: frequencyarray,
+                SCHEMA['fields']['PVAL']['label']: pvalsarray,
+                SCHEMA['fields']['RSID']['label']: snpsarray,
+                SCHEMA['fields']['OR']['label']: orarray,
                 SCHEMA['fields']['RANGE_U']['label']: rangearray,
                 SCHEMA['fields']['RANGE_L']['label']: rangearray
-                }
+                })
 
