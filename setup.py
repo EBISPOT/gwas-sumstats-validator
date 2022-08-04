@@ -15,7 +15,7 @@ setup(
     packages=['validate'],
     license='Apache License, Version 2.0',
     entry_points={
-        "console_scripts": ['ss-validate = validate.validator:main']
+        "console_scripts": ['ss-validate = ss_validate.validator:main']
     },
     url='https://github.com/EBISPOT/gwas-sumstats-validator',
     author='EBI SPOT',

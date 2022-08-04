@@ -1,5 +1,7 @@
 from tests.test_values import *
+from ss_validate.schema import SCHEMA
 import pandas as pd
+from collections import OrderedDict
 
 
 class SSTestFile:
@@ -17,8 +19,20 @@ class SSTestFile:
         df = pd.DataFrame.from_dict(self.test_data_dict)
         df.to_csv("./tests/data/{}".format(self.filename), sep=self.sep, index=False, mode='w')
 
+
     def prepare_dictionary(self):
-        return {SNP_DSET: snpsarray, PVAL_DSET: pvalsarray, CHR_DSET: chrarray, OR_DSET: orarray, BP_DSET: bparray,
-                    EFFECT_DSET: effectarray, OTHER_DSET: otherarray, FREQ_DSET: frequencyarray, SE_DSET: searray, BETA_DSET: betaarray,
-                    RANGE_L_DSET: rangearray, RANGE_U_DSET: rangearray}
+        return OrderedDict({
+                SCHEMA['fields']['CHR']['label']: chrarray,
+                SCHEMA['fields']['BP']['label']: bparray,
+                SCHEMA['fields']['EFFECT']['label']: effectarray,
+                SCHEMA['fields']['OTHER']['label']: otherarray,
+                SCHEMA['fields']['BETA']['label']: betaarray,
+                SCHEMA['fields']['SE']['label']: searray,
+                SCHEMA['fields']['EAF']['label']: frequencyarray,
+                SCHEMA['fields']['PVAL']['label']: pvalsarray,
+                SCHEMA['fields']['RSID']['label']: snpsarray,
+                SCHEMA['fields']['OR']['label']: orarray,
+                SCHEMA['fields']['RANGE_U']['label']: rangearray,
+                SCHEMA['fields']['RANGE_L']['label']: rangearray
+                })
 
