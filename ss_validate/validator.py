@@ -239,6 +239,11 @@ class Validator:
                  return self.check_rows(f)
 
     def validate_headers(self):
+        """
+        Assumes that the fields in the schema with a 'column_index' are the mandatory fields.
+        Checks that these fields are at their correct index. If more than one field label is
+        permitted e.g. 'beta' or 'odds_ratio', one of these must match.
+        """
         missing = []
         self.setup_field_validation()
         orders_fields = self.get_schema_columns_order()
@@ -249,15 +254,6 @@ class Validator:
             logger.error("The following fields where either missing or in the wrong order: {}".format(missing))
             return False
         return True
-
-    def get_mandatory_fields(self):
-        required = [f['label'] for f in self.schema['fields'].values() if f['mandatory']]
-        return required
-
-    def get_conditional_fields(self):
-        conditional = [frozenset([f['label'], self.schema['fields'][f['dependency']]['label']]) for f in self.schema['fields'].values() if 'dependency' in f]
-        conditional_list = [set(i) for i in set(conditional)]
-        return conditional_list
 
 
 def check_ext(filename, ext):
