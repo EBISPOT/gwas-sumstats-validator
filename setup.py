@@ -11,8 +11,8 @@ setup(
     description='GWAS summary statistics file validator',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    version='0.4.7',
-    packages=['ss_validate'],
+    version='0.4.8',
+    packages=['validate'],
     license='Apache License, Version 2.0',
     entry_points={
         "console_scripts": ['ss-validate = ss_validate.validator:main']

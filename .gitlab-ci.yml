@@ -1,4 +1,4 @@
-image: "python:3.7"
+image: "python:3.7.13"
 
 stages:
   - test
@@ -39,9 +39,11 @@ build:
    - docker pull $CI_REGISTRY_IMAGE:latest
    - docker build --cache-from $CI_REGISTRY_IMAGE:latest -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+  tags:
+    - gwas
   only:
-   - master
-   - dev
+    - master
+    - dev
 
 build_release:
   image: docker:latest
@@ -58,22 +60,28 @@ build_release:
    - docker tag $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
    - docker push $CI_REGISTRY_IMAGE:latest
    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+  tags:
+    - gwas
   only:
-   - tags
+    - tags
 
 deploy_test:
   stage: deploy
   script:
-    - python setup.py sdist bdist_wheel
+    - python -m build
     - python -m twine upload -u $PYPI_USER_TEST -p $PYPI_PWD_TEST --repository testpypi dist/*
+  tags:
+    - gwas
   only:
     - master
 
 deploy_prod:
   stage: deploy
   script:
-    - python setup.py sdist bdist_wheel
+    - python -m build
     - python -m twine upload -u $PYPI_USER -p $PYPI_PWD --repository pypi dist/*
+  tags:
+    - gwas
   when: manual
   only:
     - tags
