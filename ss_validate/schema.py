@@ -164,6 +164,13 @@ SCHEMA = {
             'description': 'Sample size',
             'validation': [is_dtype(int),
                            in_range(lower=0)]
+        },
+        'REF': {
+            'label': 'ref_allele',
+            'dtype': str,
+            'mandatory': False,
+            'description': 'Denote whether the effect or the other allele is the reference allele',
+            'validation': [in_list(["ea","oa","NA"])]
         }
     },
     'minimum_rows': 100000,
