@@ -1,6 +1,4 @@
 import math
-import codecs
-import os.path
 import pandas as pd
 import numpy as np
 from pandas_schema.validation import (MatchesPatternValidation,
@@ -8,6 +6,7 @@ from pandas_schema.validation import (MatchesPatternValidation,
                                       CanConvertValidation,
                                       CustomSeriesValidation,
                                       _SeriesValidation)
+from ss_validate import __version__
 
 
 class InInclusiveRangeValidation(_SeriesValidation):
@@ -107,11 +106,4 @@ p_value_validation = InRangeValidationUpperInclusive(0, 1) | (
 
 
 def get_version():
-    with open("ss_validate/__init__.py") as f:
-        lines = f.readlines()
-        for line in lines:
-            if line.startswith('__version__'):
-                delim = '"' if '"' in line else "'"
-                return line.split(delim)[1]
-            else:
-                raise RuntimeError("Unable to find version string.")
+    return __version__
