@@ -26,6 +26,7 @@ test:
     - pip install virtualenv
     - virtualenv venv
     - source venv/bin/activate
+    - pip install --upgrade build setuptools wheel twine
     - pip install -r requirements.txt
 
 build:
