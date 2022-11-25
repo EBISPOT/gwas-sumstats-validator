@@ -250,6 +250,31 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(len(validator.rows_to_drop), 3)
         self.assertFalse(valid_data)
 
+    def test_validate_ref_allele_ok(self):
+        test_filename = "test_ref.tsv"
+        test_filepath = os.path.join(self.test_storepath, test_filename)
+        logfile = test_filepath.replace('tsv', 'LOG')
+        setup_file = prep.SSTestFile(filename=test_filename)
+        setup_file.set_test_data_dict()
+        setup_file.test_data_dict[SCHEMA['fields']['REF']['label']] = ["NA", "ea", "oa", "NA"]  # set bad snps
+        setup_file.prep_test_file()
+        validator = v.Validator(file=test_filepath, logfile=logfile)
+        valid_data = validator.validate_data()
+        self.assertTrue(valid_data)
+
+    def test_validate_ref_allele_not_ok(self):
+        test_filename = "test_bad_ref.tsv"
+        test_filepath = os.path.join(self.test_storepath, test_filename)
+        logfile = test_filepath.replace('tsv', 'LOG')
+        setup_file = prep.SSTestFile(filename=test_filename)
+        setup_file.set_test_data_dict()
+        setup_file.test_data_dict[SCHEMA['fields']['REF']['label']] = [1, "no", "ea", "NA"]  # set bad snps
+        setup_file.prep_test_file()
+        validator = v.Validator(file=test_filepath, logfile=logfile)
+        valid_data = validator.validate_data()
+        self.assertEqual(len(validator.rows_to_drop), 2)
+        self.assertFalse(valid_data)
+
     def test_validate_small_pvalue_file_data(self):
         test_filename = "small_pval.tsv"
         test_filepath = os.path.join(self.test_storepath, test_filename)

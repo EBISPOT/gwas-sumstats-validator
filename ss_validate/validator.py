@@ -6,12 +6,14 @@ import argparse
 import pathlib
 import logging
 from tqdm import tqdm
-from pandas_schema import Schema, Column
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
-import pandas as pd
-from ss_validate.schema import SCHEMA
 
+import pandas as pd
+from pandas_schema import Schema, Column
+
+from ss_validate.schema import SCHEMA
+from ss_validate.helpers import get_version
 
 """
 GWAS Summary statistics file validator using pandas_schema https://github.com/TMiguelT/PandasSchema
@@ -272,8 +274,7 @@ def get_seperator(file):
 def main():
     argparser = argparse.ArgumentParser()
     argparser.add_argument("-f", "--file",
-                           help='The path to the summary statistics file to be validated',
-                           required=True)
+                           help='The path to the summary statistics file to be validated')
     argparser.add_argument("-l", "--logfile",
                            help='Provide the filename for the logs',
                            default='VALIDATE.log')
@@ -288,6 +289,9 @@ def main():
                                  If this option is used, --linelimit will be set to None',
                            action='store_true',
                            dest='dropbad')
+    argparser.add_argument("-v", "--version",
+                           help='Just return the version of the validator',
+                           action='store_true')
     args = argparser.parse_args()
 
     file_to_validate = args.file
@@ -295,7 +299,15 @@ def main():
     minrows = args.minrows
     drop_bad = args.dropbad
     logfile = args.logfile
+    print_version = args.version
 
+    if print_version:
+        print(get_version())
+        sys.exit(0)
+    else:
+        if not file_to_validate:
+            logger.error("the following arguments are required: -f/--file")
+            sys.exit()
 
     validator = Validator(file=file_to_validate,
                           logfile=logfile,
