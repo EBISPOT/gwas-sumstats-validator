@@ -1,12 +1,14 @@
 # Summary Statistics TSV file Validator
 
-A file validator for validating GWAS summary statistics TSV files prior to and post [harmonisation](https://github.com/EBISPOT/sum-stats-formatter/tree/master/harmonisation) using [pandas_schema](https://tmiguelt.github.io/PandasSchema/). The purpose is to validate files before their [conversion to HDF5](https://github.com/EBISPOT/SumStats/). 
-
-## Requirements
-- python3
+A file validator for validating GWAS summary statistics TSV files prior to and post [harmonisation](https://github.com/EBISPOT/sum-stats-formatter/tree/master/harmonisation) using [pandas_schema](https://tmiguelt.github.io/PandasSchema/). The purpose is to validate files before their [conversion to HDF5](https://github.com/EBISPOT/SumStats/).
 
 ## Installation
+Python package:
+- Requires python3
 - `pip install ss-validate`
+
+Alternatively, use the docker image: 
+- `docker run ebispot/gwas-sumstats-validator ss-validate --help`
 
 ## Running the validator
 To run the validator on a file:
@@ -41,7 +43,7 @@ The errors from the output tell us that row seven has too many columns and row o
 - Install as above
 - Import and use in your python file 
 ```
-import validate.validator as ssv
+import ss_validate.validator as ssv
 
 # initialise a validator object for your summary statistics and settings 
 validator = ssv.Validator(file='sumstats.tsv.gz', filetype='gwas-upload', error_limit=1, logfile='logfile.log')
