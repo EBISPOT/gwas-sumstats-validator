@@ -250,7 +250,10 @@ class Validator:
         self.setup_field_validation()
         orders_fields = self.get_schema_columns_order()
         for index, fields in orders_fields.items():
-            if self.header[index] not in fields:
+            if len(self.header) > index:
+                if self.header[index] not in fields:
+                    missing.append(fields)
+            else:
                 missing.append(fields)
         if len(missing) > 0:
             logger.error("The following fields where either missing or in the wrong order: {}".format(missing))

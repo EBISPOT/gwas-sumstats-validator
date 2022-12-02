@@ -81,6 +81,7 @@ class BasicTestCase(unittest.TestCase):
         valid_headers = validator.validate_headers()
         self.assertFalse(valid_headers)
 
+
     def test_validate_file_headers_in_wrong_order(self):
         test_filepath = os.path.join(self.test_storepath, "test_file.tsv")
         setup_file = prep.SSTestFile()
@@ -316,6 +317,19 @@ class BasicTestCase(unittest.TestCase):
         valid_data = validator.validate_data()
         self.assertTrue(valid_data)
 
+    def test_validate_pvalue_can_be_zero(self):
+        test_filename = "zero_pval.tsv"
+        test_filepath = os.path.join(self.test_storepath, test_filename)
+        logfile=test_filepath.replace('tsv', 'LOG')
+        setup_file = prep.SSTestFile(filename=test_filename)
+        setup_file.set_test_data_dict()
+        p_array = [0, '0E0', '0E-10', 0.0]
+        setup_file.test_data_dict[SCHEMA['fields']['PVAL']['label']] = p_array
+        setup_file.prep_test_file()
+        validator = v.Validator(file=test_filepath, logfile=logfile)
+        valid_data = validator.validate_data()
+        self.assertTrue(valid_data)
+
     def test_drop_bad_rows_does_not_drop_good_lines(self):
         test_filepath = os.path.join(self.test_storepath, "test_file.tsv")
         logfile=test_filepath.replace('tsv', 'LOG')
@@ -332,7 +346,7 @@ class BasicTestCase(unittest.TestCase):
         logfile=test_filepath.replace('tsv', 'LOG')
         setup_file = prep.SSTestFile(filename=test_filename)
         setup_file.set_test_data_dict()
-        p_array = [0, -1, 'NA', 100]
+        p_array = [2, -1, 'NA', 100]
         setup_file.test_data_dict[SCHEMA['fields']['PVAL']['label']] = p_array
         setup_file.prep_test_file()
         validator = v.Validator(file=test_filepath, logfile=logfile)

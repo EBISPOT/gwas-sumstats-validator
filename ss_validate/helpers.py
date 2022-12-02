@@ -82,7 +82,7 @@ def match_regex(pattern):
 
 
 def in_list(list):
-    return InListValidation(list, message="is not an accepted value.")
+    return InListValidation(list, message=f"is not an accepted value. Value must be be {list}")
 
 
 def in_range(lower=-math.inf, upper=math.inf):
@@ -93,7 +93,7 @@ def is_dtype(dtype):
     return CanConvertValidation(dtype)
 
 
-p_value_validation = InRangeValidationUpperInclusive(0, 1) | (
+p_value_validation = InInclusiveRangeValidation(0, 1) | (
         CustomSeriesValidation(
             lambda x: pd.to_numeric(x.str.split('e|E', expand=True)[1].fillna(value=np.nan)
                                     , errors='coerce') < -1,
