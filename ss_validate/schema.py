@@ -6,6 +6,7 @@ from ss_validate.helpers import InInclusiveRangeValidation, match_regex, in_list
 #Summary Statistics Validation Schema #
 #=====================================#
 
+
 SCHEMA = {
     'fields': {
         'VAR_ID': {

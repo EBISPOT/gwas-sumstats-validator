@@ -13,7 +13,7 @@ import pandas as pd
 from pandas_schema import Schema, Column
 
 from ss_validate.schema import SCHEMA
-from ss_validate.helpers import get_version
+from ss_validate.helpers import get_version, p_value_validation_allow_zero, is_dtype
 
 """
 GWAS Summary statistics file validator using pandas_schema https://github.com/TMiguelT/PandasSchema
@@ -42,6 +42,7 @@ class Validator:
                  error_limit=1000,
                  minrows=SCHEMA['minimum_rows'],
                  dropbad=False,
+                 zero_pvalues=False,
                  chunksize=100000):
         self.file = file
         self.schema = schema
@@ -57,6 +58,9 @@ class Validator:
         self.nrows = None
         self.psplit_row_index = -99
         self.chunksize = chunksize
+        self.zero_pvalues = zero_pvalues
+        if self.zero_pvalues is True:
+            self.allow_zero_pvalues()
 
         handler = logging.FileHandler(logfile)
         handler.setLevel(logging.INFO)
@@ -87,6 +91,9 @@ class Validator:
             logger.info("File is invalid")
             return False
         return True
+
+    def allow_zero_pvalues(self):
+        self.schema['fields']['PVAL']['validation'] = [is_dtype(float), p_value_validation_allow_zero]
 
     def validate_data(self):
         self.setup_field_validation()
@@ -295,6 +302,9 @@ def main():
     argparser.add_argument("-v", "--version",
                            help='Just return the version of the validator',
                            action='store_true')
+    argparser.add_argument("-z", "--zero_pvalues",
+                           help="Use if you want allow p-values of zero",
+                           action='store_true')
     args = argparser.parse_args()
 
     file_to_validate = args.file
@@ -303,6 +313,7 @@ def main():
     drop_bad = args.dropbad
     logfile = args.logfile
     print_version = args.version
+    zero_pvalues = args.zero_pvalues
 
     if print_version:
         print(get_version())
@@ -316,7 +327,8 @@ def main():
                           logfile=logfile,
                           error_limit=error_limit,
                           minrows=minrows,
-                          dropbad=drop_bad)
+                          dropbad=drop_bad,
+                          zero_pvalues=zero_pvalues)
 
     logger.info("Validating file extension...")
     if not validator.validate_file_extension():

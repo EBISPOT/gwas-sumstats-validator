@@ -326,7 +326,7 @@ class BasicTestCase(unittest.TestCase):
         p_array = [0, '0E0', '0E-10', 0.0]
         setup_file.test_data_dict[SCHEMA['fields']['PVAL']['label']] = p_array
         setup_file.prep_test_file()
-        validator = v.Validator(file=test_filepath, logfile=logfile)
+        validator = v.Validator(file=test_filepath, logfile=logfile, zero_pvalues=True)
         valid_data = validator.validate_data()
         self.assertTrue(valid_data)
 
@@ -346,7 +346,7 @@ class BasicTestCase(unittest.TestCase):
         logfile=test_filepath.replace('tsv', 'LOG')
         setup_file = prep.SSTestFile(filename=test_filename)
         setup_file.set_test_data_dict()
-        p_array = [2, -1, 'NA', 100]
+        p_array = [0, -1, 'NA', 100]
         setup_file.test_data_dict[SCHEMA['fields']['PVAL']['label']] = p_array
         setup_file.prep_test_file()
         validator = v.Validator(file=test_filepath, logfile=logfile)
