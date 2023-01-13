@@ -107,7 +107,7 @@ class Validator:
                 self.evaluate_errors()
                 pbar.update(self.chunksize)
                 if stop:
-                    sys.exit()
+                    break
             if self.rows_to_drop:
                 logger.info("File is invalid - {} rows with errors, limit set to {}".format(len(self.rows_to_drop), self.error_limit))
                 return False
