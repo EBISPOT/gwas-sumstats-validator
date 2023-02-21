@@ -124,7 +124,7 @@ SCHEMA = {
             'dtype': str,
             'mandatory': True,
             'description': 'Allele associated with the effect',
-            'validation': [match_regex('^[ACTGactg]+$')]
+            'validation': [match_regex('^LONG_STRING$|^[ACTGactg]+$')]
         },
         'OTHER':{
             'label': 'other_allele',
@@ -132,7 +132,7 @@ SCHEMA = {
             'dtype': str,
             'mandatory': True,
             'description': 'The non-effect allele',
-            'validation': [match_regex('^[ACTGactg]+$')]
+            'validation': [match_regex('^LONG_STRING$|^[ACTGactg]+$')]
         },
         'EAF': {
             'label': 'effect_allele_frequency',
