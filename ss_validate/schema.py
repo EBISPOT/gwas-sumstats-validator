@@ -149,7 +149,7 @@ SCHEMA = {
             'mandatory': False,
             'description': 'Imputation information metric',
             'validation': [is_dtype(float),
-                           in_range()]
+                           in_range(0, 1)]
         },
         'HM_CODE': {
             'label': 'hm_code',
