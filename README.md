@@ -1,3 +1,5 @@
+# **NOTE: This reposisitory has been deprecated as of 12th Apr 2023. The GWAS Catalog summary statistics validator can be found [here](https://github.com/EBISPOT/gwas-sumstats-tools)**
+
 # Summary Statistics TSV file Validator
 
 A file validator for validating GWAS summary statistics TSV files prior to and post [harmonisation](https://github.com/EBISPOT/sum-stats-formatter/tree/master/harmonisation) using [pandas_schema](https://tmiguelt.github.io/PandasSchema/). The purpose is to validate files before their [conversion to HDF5](https://github.com/EBISPOT/SumStats/).
